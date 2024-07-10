@@ -1,0 +1,34 @@
+name: goview
+services:
+  app:
+    image: allape/goview:latest
+#    build:
+#      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./certs:/app/certs
+      - ./preview:/preview
+    ports:
+      - "9090:8080"
+    environment:
+#      http_proxy: http://host.docker.internal:1080
+#      https_proxy: http://host.docker.internal:1080
+#      no_proxy: localhost,127.0.0.1,192.*.*.*,172.*.*.*
+      GIN_MODE: release
+      GOVIEW_UI_INDEX_HTML: /app/assets/index.html
+      GOVIEW_TRUSTED_CERTS: /app/certs/root.crt
+      GOVIEW_PREVIEW_FOLDER: /preview
+      GOVIEW_HTTP_BINDING: ":8080"
+      GOVIEW_DATABASE_URL: "root:Root_123456@(database:3306)/goview?charset=utf8mb4&parseTime=true"
+    depends_on:
+      database:
+        condition: service_healthy
+  database:
+    image: mysql:8.3.0
+    healthcheck:
+      test: "curl http://127.0.0.1:3306 > /dev/null && exit 0 || exit 1"
+    environment:
+      - MYSQL_ROOT_PASSWORD=Root_123456
+      - MYSQL_DATABASE=goview
+    volumes:
+      - ./database:/var/lib/mysql

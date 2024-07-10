@@ -1,0 +1,8 @@
+@mixin ThemedBackground {
+  background-color: white;
+  color: black;
+  @media (prefers-color-scheme: dark) {
+    background-color: black;
+    color: white;
+  }
+}
