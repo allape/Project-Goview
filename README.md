@@ -18,16 +18,16 @@ export GOVIEW_DATABASE_URL="root:password@tcp(127.0.0.1:3306)/goview?charset=utf
 go run .
 ```
 
-### More environment variables
+### More environment variables are in
 
-are in [env/env.go](env/env.go)
+[env/env.go](env/env.go)
 
 ## Docker
 
 ### Build
 
 ```shell
-docker build --build-arg http_proxy=http://as.lan:1080 --build-arg https_proxy=http://as.lan:1080 -t allape/goview .
+docker build -t allape/goview .
 # docker tag allape/goview:latest docker-registry.lan.allape.cc/allape/goview:latest
 # docker push docker-registry.lan.allape.cc/allape/goview:latest
 ```
