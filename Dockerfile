@@ -37,6 +37,8 @@ FROM alpine:3.19.1
 
 WORKDIR /app
 
+RUN apk update && apk add ffmpeg
+
 COPY --from=ui_builder /build/dist assets
 COPY --from=builder /build/app app
 
