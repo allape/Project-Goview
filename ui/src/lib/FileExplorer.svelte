@@ -212,7 +212,7 @@
       {/if}
     {/if}
     {#each files as file (file.name)}
-      <div class="file" class:folder={file.isDir} on:click={() => onClick(file)} role="none">
+      <div class="file" data-path={file._path} class:folder={file.isDir} on:click={() => onClick(file)} role="none">
         <div class="preview">
           {#if file.isDir}
             <img src={Folder} alt={file.name}>
