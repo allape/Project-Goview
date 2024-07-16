@@ -44,7 +44,7 @@ export async function ls(dsid: IDatasource['id'], cwd: string): Promise<IFile[]>
   const files = await ajax<IFile[]>(`/datasource/ls/${dsid}/${cwd}`);
   return files.map((file: IFile) => {
     file._displayName = `${file.name}${file.isDir ? '/' : ''}`;
-    file._path = `${cwd || '/'}${encodeURIComponent(file.name)}`;
+    file._path = `${cwd}${encodeURIComponent(file._displayName)}`;
     file._preview = `${BASE_URL}/preview/get/${dsid}/${file._path}?t=${Date.now()}`;
     return file;
   });

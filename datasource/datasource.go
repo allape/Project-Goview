@@ -88,6 +88,7 @@ type Preview struct {
 	Key          string `json:"key" gorm:"uniqueIndex;type:varchar(255)"`
 	Digest       string `json:"digest"`
 	Cover        string `json:"cover"`
+	FFProbeInfo  string `json:"ffprobeInfo"`
 }
 
 type Datasource struct {
@@ -161,6 +162,11 @@ func GeneratePreview(source driver.Driver, datasource Datasource, sourceFile, ds
 	}
 
 	dtsFile := digest + ".jpg"
+
+	prev.FFProbeInfo, err = util.FFProbeInfo(tmpFile.Name())
+	if err != nil {
+		return nil, err
+	}
 
 	switch fileType.MIME.Type {
 	case "image":
@@ -399,7 +405,39 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 			return
 		}
 
+		context.Header("X-FFProbe", pre.FFProbeInfo)
 		context.File(path.Join(previewFolder, pre.Cover))
+	})
+
+	preview.GET("/info/:dsid/*file", func(context *gin.Context) {
+		var datasource Datasource
+		repo.First(&datasource, context.Param("dsid"))
+		if datasource.ID == 0 {
+			context.JSON(http.StatusNotFound, base.R[any]{
+				Code:    "404",
+				Message: "not found",
+			})
+			return
+		}
+
+		file := context.Param("file")[1:]
+		key := BuildPreviewKey(datasource, file)
+
+		var pre Preview
+		repo.First(&pre, "`key` = ?", key)
+
+		if pre.ID == 0 {
+			context.JSON(http.StatusNotFound, base.R[any]{
+				Code:    "404",
+				Message: "not found",
+			})
+			return
+		}
+
+		context.JSON(http.StatusOK, base.R[Preview]{
+			Code: "200",
+			Data: pre,
+		})
 	})
 
 	preview.GET("/static", func(context *gin.Context) {
@@ -417,6 +455,7 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 			return
 		}
 
+		context.Header("X-FFProbe", pre.FFProbeInfo)
 		context.File(path.Join(previewFolder, pre.Cover))
 	})
 

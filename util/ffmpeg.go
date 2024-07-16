@@ -112,6 +112,15 @@ func FFProbe(file string) (*FFProbeJson, error) {
 	return &ffprobe, nil
 }
 
+func FFProbeInfo(file string) (string, error) {
+	cmd := exec.Command("ffprobe", "-hide_banner", file)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("ffprobe: %w: %s", err, output)
+	}
+	return string(output), nil
+}
+
 func FFMpegScaleImage(dst, src string, scale float64) (CommandOutput, error) {
 	ffprobe, err := FFProbe(src)
 	if err != nil {
