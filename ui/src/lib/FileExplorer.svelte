@@ -3,10 +3,11 @@
   import { gen } from '../api/preview';
   import CDDotDot from '../asset/i_v_cd...jpg';
   import Folder from '../asset/i_v_folder.jpg';
+  import Button from './Button.svelte';
 
   const SEP = '/';
 
-  export let tick = 0;
+  let loading: boolean = false;
 
   export let datasource: IDatasource | undefined;
   export let cwd: string = '';
@@ -14,24 +15,32 @@
   export let files: IFile[] = [];
 
   async function render() {
-    if (!datasource) {
+    if (!datasource || loading) {
       return;
     }
 
-    const s = await stat(datasource.id, cwd);
-    if (!s.isDir) {
-      files = [s];
-    } else {
-      files = await ls(datasource.id, cwd);
-      files.sort((a, b) => {
-        if (a.isDir && !b.isDir) {
-          return -1;
-        } else if (!a.isDir && b.isDir) {
-          return 1;
-        } else {
-          return a.name.localeCompare(b.name);
-        }
-      });
+    loading = true;
+
+    files = [];
+
+    try {
+      const s = await stat(datasource.id, cwd);
+      if (!s.isDir) {
+        files = [s];
+      } else {
+        files = await ls(datasource.id, cwd);
+        files.sort((a, b) => {
+          if (a.isDir && !b.isDir) {
+            return -1;
+          } else if (!a.isDir && b.isDir) {
+            return 1;
+          } else {
+            return a.name.localeCompare(b.name);
+          }
+        });
+      }
+    } finally {
+      loading = false;
     }
   }
 
@@ -65,7 +74,6 @@
   }
 
   $: {
-    console.log(tick);
     if (datasource) {
       render();
     } else {
@@ -100,7 +108,7 @@
       flex: 1;
       display: flex;
       justify-content: flex-start;
-      align-items: flex-start;
+      align-items: stretch;
       gap: 10px;
       flex-wrap: wrap;
       overflow-y: auto;
@@ -138,10 +146,6 @@
 
           .fullname {
             display: block;
-          }
-
-          .buttons {
-            opacity: 1;
           }
         }
 
@@ -184,7 +188,6 @@
           right: 0;
           top: 0;
           padding: 10px;
-          opacity: 0;
           transition: 250ms;
         }
       }
@@ -199,7 +202,9 @@
     </div>
   </div>
   <div class="files">
-    {#if cwd}
+    {#if loading}
+      Loading...
+    {:else if cwd}
       <div class="file folder placeholder" on:click={onCdDotDot} role="none">
         <div class="preview">
           <img src={CDDotDot} alt="cd ..">
@@ -211,6 +216,7 @@
         <div class="empty">EMPTY</div>
       {/if}
     {/if}
+
     {#each files as file (file.name)}
       <div class="file" data-path={file._path} class:folder={file.isDir} on:click={() => onClick(file)} role="none">
         <div class="preview">
@@ -226,7 +232,7 @@
         </div>
         <div class="buttons">
           {#if !file.isDir}
-            <button on:click={() => genPreview(file)}>Gen Preview</button>
+            <Button onClick={() => genPreview(file)}>Gen Preview</Button>
             <button on:click={() => window.open(file._preview)}>Open</button>
           {/if}
         </div>

@@ -1,9 +1,8 @@
 <script lang="ts">
 	import type { IDatasource } from './api/datasource';
+	import Button from './lib/Button.svelte';
 	import DatasourceModalButton from './lib/DatasourceModalButton.svelte';
 	import FileExplorer from './lib/FileExplorer.svelte';
-
-	let tick = 0;
 
 	let datasources: IDatasource[] = [];
 
@@ -59,9 +58,6 @@
 
 <div class="wrapper">
 	<div class="buttons">
-		<div>
-			<button on:click={() => tick++}>Reload</button>
-		</div>
 		<div class="full">
 			<select bind:value={selectedDatasourceID}>
 				<option>-</option>
@@ -72,10 +68,11 @@
 		</div>
 		<div>
 			<DatasourceModalButton on:change={handleDatasourcesChanged} />
+			<Button onClick={() => new Promise(r => setTimeout(r, 3000))}>Tasks</Button>
 		</div>
 	</div>
 	<div class="table">
-		<FileExplorer bind:datasource={datasource} bind:tick={tick} />
+		<FileExplorer bind:datasource={datasource} />
 	</div>
 </div>
 
