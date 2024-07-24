@@ -10,7 +10,9 @@ import (
 	"github.com/allape/goview/datasource/driver/dufs"
 	"github.com/allape/goview/datasource/driver/local"
 	"github.com/allape/goview/env"
+	"github.com/allape/goview/rx"
 	"github.com/allape/goview/util"
+	"github.com/gin-contrib/sse"
 	"github.com/gin-gonic/gin"
 	"github.com/h2non/filetype"
 	"gorm.io/gorm"
@@ -98,6 +100,8 @@ type Datasource struct {
 	Cwd  string `json:"cwd"`
 }
 
+var GenerationCounter = 0
+var GenerationBroadcast = rx.New[int](99)
 var GeneratePreviewLocker = make(chan struct{}, 1)
 
 func BuildPreviewKey(datasource Datasource, file string) string {
@@ -106,7 +110,11 @@ func BuildPreviewKey(datasource Datasource, file string) string {
 
 func GeneratePreview(source driver.Driver, datasource Datasource, sourceFile, dstFolder string, finder func(digest string) (*Preview, error)) (*Preview, error) {
 	GeneratePreviewLocker <- struct{}{}
+	GenerationCounter += 1
+	GenerationBroadcast.Send(GenerationCounter)
 	defer func() {
+		GenerationCounter -= 1
+		GenerationBroadcast.Send(GenerationCounter)
 		<-GeneratePreviewLocker
 	}()
 
@@ -457,6 +465,36 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 
 		context.Header("X-FFProbe", pre.FFProbeInfo)
 		context.File(path.Join(previewFolder, pre.Cover))
+	})
+
+	// SSE
+
+	const (
+		SSETaskCount = "EVENT_PREVIEW_TASK_COUNT"
+	)
+
+	preview.GET("/task/count/sse", func(context *gin.Context) {
+		context.Header("Content-Type", "text/event-stream")
+		context.Writer.Flush()
+
+		subscription := GenerationBroadcast.Subscribe()
+
+		for count := range subscription.Channel {
+			err := sse.Encode(context.Writer, sse.Event{
+				Event: SSETaskCount,
+				Data: base.R[int]{
+					Code: "200",
+					Data: count,
+				},
+			})
+			if err != nil {
+				log.Println("Preview task sse writing error:", err)
+				break
+			}
+			context.Writer.Flush()
+		}
+
+		subscription.Unsubscribe()
 	})
 
 	rout.GET(NoPreviewRouter, func(context *gin.Context) {

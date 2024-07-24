@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { IDatasource } from './api/datasource';
-	import Button from './lib/Button.svelte';
+	import type { IR } from './api/http';
+	import { BASE_URL } from './config/server';
 	import DatasourceModalButton from './lib/DatasourceModalButton.svelte';
 	import FileExplorer from './lib/FileExplorer.svelte';
 
@@ -8,6 +10,8 @@
 
 	let selectedDatasourceID: IDatasource['id'] | undefined;
 	let datasource: IDatasource | undefined;
+
+	let taskCount = 0;
 
 	function handleDatasourcesChanged(e: CustomEvent<IDatasource[]>) {
 		datasources = e.detail;
@@ -20,6 +24,23 @@
 			datasource = undefined;
 		}
 	}
+
+	onMount(() => {
+		const sse = new EventSource(`${BASE_URL}/preview/task/count/sse`);
+		sse.addEventListener('EVENT_PREVIEW_TASK_COUNT', e => {
+			const data: IR<number> = JSON.parse(e.data);
+			taskCount = data.d;
+		});
+		sse.addEventListener('error', e => {
+			console.error('[SSE] error:', e);
+		});
+		sse.addEventListener('open', e => {
+			console.log('[SSE] open:', e);
+		});
+		return () => {
+			sse.close();
+		};
+	});
 </script>
 
 <style lang="scss">
@@ -44,6 +65,13 @@
 					width: 100%;
 				}
 			}
+			.taskCount {
+				min-width: 150px;
+				text-align: left;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
     }
 
 		.table {
@@ -58,6 +86,9 @@
 
 <div class="wrapper">
 	<div class="buttons">
+		<div>
+			<div class="taskCount">Remained: {taskCount.toLocaleString()}</div>
+		</div>
 		<div class="full">
 			<select bind:value={selectedDatasourceID}>
 				<option>-</option>
@@ -68,7 +99,6 @@
 		</div>
 		<div>
 			<DatasourceModalButton on:change={handleDatasourcesChanged} />
-			<Button onClick={() => new Promise(r => setTimeout(r, 3000))}>Tasks</Button>
 		</div>
 	</div>
 	<div class="table">
