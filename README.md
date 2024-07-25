@@ -27,7 +27,7 @@ go run .
 ### Build
 
 ```shell
-docker build -t allape/goview .
+docker build --build-arg http_proxy=http://docker.host.internal:1080 --build-arg https_proxy=http://docker.host.internal:1080 -t allape/goview .
 # docker tag allape/goview:latest docker-registry.lan.allape.cc/allape/goview:latest
 # docker push docker-registry.lan.allape.cc/allape/goview:latest
 ```

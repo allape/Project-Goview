@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/allape/goview/assets"
 	"github.com/allape/goview/base"
+	"github.com/allape/goview/counter"
 	"github.com/allape/goview/datasource/driver"
 	"github.com/allape/goview/datasource/driver/dufs"
 	"github.com/allape/goview/datasource/driver/local"
@@ -100,8 +101,8 @@ type Datasource struct {
 	Cwd  string `json:"cwd"`
 }
 
-var GenerationCounter = 0
-var GenerationBroadcast = rx.New[int](99)
+var GenerationCounter counter.AtomicCounter
+var GenerationBroadcast = rx.New[int64](99)
 var GeneratePreviewLocker = make(chan struct{}, 1)
 
 func BuildPreviewKey(datasource Datasource, file string) string {
@@ -109,12 +110,12 @@ func BuildPreviewKey(datasource Datasource, file string) string {
 }
 
 func GeneratePreview(source driver.Driver, datasource Datasource, sourceFile, dstFolder string, finder func(digest string) (*Preview, error)) (*Preview, error) {
+	GenerationCounter.Increment()
+	GenerationBroadcast.Send(GenerationCounter.Value())
 	GeneratePreviewLocker <- struct{}{}
-	GenerationCounter += 1
-	GenerationBroadcast.Send(GenerationCounter)
 	defer func() {
-		GenerationCounter -= 1
-		GenerationBroadcast.Send(GenerationCounter)
+		GenerationCounter.Decrement()
+		GenerationBroadcast.Send(GenerationCounter.Value())
 		<-GeneratePreviewLocker
 	}()
 
@@ -482,7 +483,7 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 		for count := range subscription.Channel {
 			err := sse.Encode(context.Writer, sse.Event{
 				Event: SSETaskCount,
-				Data: base.R[int]{
+				Data: base.R[int64]{
 					Code: "200",
 					Data: count,
 				},

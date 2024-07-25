@@ -93,14 +93,27 @@
     overflow: hidden;
 
     .nav {
+      display: flex;
       padding: 0 0 10px 0;
+      flex-wrap: nowrap;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
 
       .cwd {
         display: flex;
+        flex: 1;
 
         input {
           flex: 1;
         }
+      }
+
+      .buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
     }
 
@@ -199,6 +212,9 @@
   <div class="nav">
     <div class="cwd">
       <input type="text" placeholder="cwd" bind:value={cwd}>
+    </div>
+    <div class="buttons">
+      <Button onClick={render}>Refresh</Button>
     </div>
   </div>
   <div class="files">
