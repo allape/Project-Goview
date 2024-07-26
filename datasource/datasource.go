@@ -85,6 +85,11 @@ func GetDriver(t Type) (driver.Driver, error) {
 
 // endregion
 
+type PreviewableFile struct {
+	Stat    driver.File `json:"stat"`
+	Preview *Preview    `json:"preview"`
+}
+
 type Preview struct {
 	base.Model
 	DatasourceID uint   `json:"datasourceId"`
@@ -107,6 +112,18 @@ var GeneratePreviewLocker = make(chan struct{}, 1)
 
 func BuildPreviewKey(datasource Datasource, file string) string {
 	return fmt.Sprintf("goview://%d?file=%s", datasource.ID, url.QueryEscape(file))
+}
+
+func GetPreview(repo *gorm.DB, datasource Datasource, file string) (*Preview, error) {
+	var pre Preview
+	err := repo.First(&pre, "`key` = ?", BuildPreviewKey(datasource, file)).Error
+	if err != nil {
+		return nil, err
+	}
+	if pre.ID == 0 {
+		return nil, errors.New("preview not found")
+	}
+	return &pre, nil
 }
 
 func GeneratePreview(source driver.Driver, datasource Datasource, sourceFile, dstFolder string, finder func(digest string) (*Preview, error)) (*Preview, error) {
@@ -299,9 +316,13 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 				})
 				return
 			}
-			context.JSON(http.StatusOK, base.R[driver.File]{
+			preview, _ := GetPreview(repo, datasource, file)
+			context.JSON(http.StatusOK, base.R[PreviewableFile]{
 				Code: "200",
-				Data: *stat,
+				Data: PreviewableFile{
+					Stat:    *stat,
+					Preview: preview,
+				},
 			})
 		case "ls":
 			files, err := source.List(file)
@@ -313,9 +334,18 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 				return
 			}
 
-			context.JSON(http.StatusOK, base.R[[]driver.File]{
+			previewableFiles := make([]PreviewableFile, len(files))
+			for i, f := range files {
+				preview, _ := GetPreview(repo, datasource, f.Name)
+				previewableFiles[i] = PreviewableFile{
+					Stat:    f,
+					Preview: preview,
+				}
+			}
+
+			context.JSON(http.StatusOK, base.R[[]PreviewableFile]{
 				Code: "200",
-				Data: files,
+				Data: previewableFiles,
 			})
 		case "cat":
 			context.Status(http.StatusOK)
@@ -404,12 +434,9 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 		}
 
 		file := context.Param("file")[1:]
-		key := BuildPreviewKey(datasource, file)
 
-		var pre Preview
-		repo.First(&pre, "`key` = ?", key)
-
-		if pre.ID == 0 {
+		pre, err := GetPreview(repo, datasource, file)
+		if err != nil {
 			context.Redirect(http.StatusFound, NoPreviewRouter)
 			return
 		}
@@ -430,12 +457,9 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 		}
 
 		file := context.Param("file")[1:]
-		key := BuildPreviewKey(datasource, file)
 
-		var pre Preview
-		repo.First(&pre, "`key` = ?", key)
-
-		if pre.ID == 0 {
+		pre, err := GetPreview(repo, datasource, file)
+		if err != nil {
 			context.JSON(http.StatusNotFound, base.R[any]{
 				Code:    "404",
 				Message: "not found",
@@ -445,27 +469,13 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 
 		context.JSON(http.StatusOK, base.R[Preview]{
 			Code: "200",
-			Data: pre,
+			Data: *pre,
 		})
 	})
 
-	preview.GET("/static", func(context *gin.Context) {
-		key := context.Query("key")
-
-		if key == "" {
-			context.Data(http.StatusBadGateway, "image/jpeg", assets.IV404)
-			return
-		}
-
-		var pre Preview
-		repo.First(&pre, "`key` = ?", key)
-		if pre.ID == 0 {
-			context.Redirect(http.StatusFound, NoPreviewRouter)
-			return
-		}
-
-		context.Header("X-FFProbe", pre.FFProbeInfo)
-		context.File(path.Join(previewFolder, pre.Cover))
+	preview.GET("/static/*file", func(context *gin.Context) {
+		file := context.Param("file")[1:]
+		context.File(path.Join(previewFolder, file))
 	})
 
 	// SSE

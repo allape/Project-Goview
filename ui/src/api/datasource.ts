@@ -1,6 +1,7 @@
 import type { LV } from '../config/lv';
 import { BASE_URL } from '../config/server';
 import ajax, { type IBaseModel } from './http';
+import type { IPreview } from './preview';
 
 export interface IFile {
   isDir: boolean;
@@ -9,7 +10,12 @@ export interface IFile {
 
   _displayName: string;
   _path: string;
-  _preview: string;
+  _cover: string;
+}
+
+export interface IPreviewFile {
+  stat: IFile;
+  preview?: IPreview;
 }
 
 export type Type = 'dufs' | 'local';
@@ -36,17 +42,18 @@ export function save(ds: IDatasource): Promise<IDatasource> {
   });
 }
 
-export function stat(dsid: IDatasource['id'], file: string): Promise<IFile> {
+export function stat(dsid: IDatasource['id'], file: string): Promise<IPreviewFile> {
   return ajax(`/datasource/stat/${dsid}/${file}`);
 }
 
-export async function ls(dsid: IDatasource['id'], cwd: string): Promise<IFile[]> {
-  const files = await ajax<IFile[]>(`/datasource/ls/${dsid}/${cwd}`);
-  return files.map((file: IFile) => {
+export async function ls(dsid: IDatasource['id'], cwd: string): Promise<IPreviewFile[]> {
+  const files = await ajax<IPreviewFile[]>(`/datasource/ls/${dsid}/${cwd}`);
+  return files.map((pf: IPreviewFile) => {
+    const file = pf.stat;
     file._displayName = `${file.name}${file.isDir ? '/' : ''}`;
     file._path = `${cwd}${encodeURIComponent(file._displayName)}`;
-    file._preview = `${BASE_URL}/preview/get/${dsid}/${file._path}?t=${Date.now()}`;
-    return file;
+    file._cover = pf.preview?.cover ? `${BASE_URL}/preview/static/${pf.preview.cover}` : `${BASE_URL}/preview/image/no-preview.jpg`;
+    return pf;
   });
 }
 

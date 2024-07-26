@@ -9,6 +9,7 @@ export interface IPreview extends IBaseModel {
   cover: string;
 }
 
+
 export function gen(dsid: IDatasource['id'], file: string): Promise<IPreview> {
   return ajax(`/preview/gen/${dsid}/${file}`);
 }

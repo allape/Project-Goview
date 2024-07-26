@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { type IDatasource, type IFile, ls, stat } from '../api/datasource';
+  import { type IDatasource, type IFile, type IPreviewFile, ls, stat } from '../api/datasource';
   import { gen } from '../api/preview';
   import CDDotDot from '../asset/i_v_cd...jpg';
   import Folder from '../asset/i_v_folder.jpg';
@@ -12,7 +12,7 @@
   export let datasource: IDatasource | undefined;
   export let cwd: string = '';
 
-  export let files: IFile[] = [];
+  export let files: IPreviewFile[] = [];
 
   async function render() {
     if (!datasource || loading) {
@@ -25,17 +25,17 @@
 
     try {
       const s = await stat(datasource.id, cwd);
-      if (!s.isDir) {
+      if (!s.stat.isDir) {
         files = [s];
       } else {
         files = await ls(datasource.id, cwd);
         files.sort((a, b) => {
-          if (a.isDir && !b.isDir) {
+          if (a.stat.isDir && !b.stat.isDir) {
             return -1;
-          } else if (!a.isDir && b.isDir) {
+          } else if (!a.stat.isDir && b.stat.isDir) {
             return 1;
           } else {
-            return a.name.localeCompare(b.name);
+            return a.stat.name.localeCompare(b.stat.name);
           }
         });
       }
@@ -233,23 +233,24 @@
       {/if}
     {/if}
 
-    {#each files as file (file.name)}
-      <div class="file" data-path={file._path} class:folder={file.isDir} on:click={() => onClick(file)} role="none">
+    {#each files as file (file.stat.name)}
+      <div class="file" data-path={file.stat._path} class:folder={file.stat.isDir} on:click={() => onClick(file.stat)}
+           role="none">
         <div class="preview">
-          {#if file.isDir}
-            <img src={Folder} alt={file.name}>
+          {#if file.stat.isDir}
+            <img src={Folder} alt={file.stat.name}>
           {:else}
-            <img src={file._preview} alt={file.name}>
+            <img src={file.stat._cover} alt={file.stat.name}>
           {/if}
         </div>
-        <div class="name">{file._displayName}</div>
+        <div class="name">{file.stat._displayName}</div>
         <div class="fullname">
-          {file._displayName}
+          {file.stat._displayName}
         </div>
         <div class="buttons">
-          {#if !file.isDir}
-            <Button onClick={() => genPreview(file)}>Gen Preview</Button>
-            <button on:click={() => window.open(file._preview)}>Open</button>
+          {#if !file.stat.isDir}
+            <Button onClick={() => genPreview(file.stat)}>Gen Preview</Button>
+            <button on:click={() => window.open(file.stat._cover)}>Open</button>
           {/if}
         </div>
       </div>
