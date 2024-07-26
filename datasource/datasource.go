@@ -308,11 +308,11 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 			return
 		}
 
-		file = source.PathJoin(datasource.Cwd, file)
+		fullPath := source.PathJoin(datasource.Cwd, file)
 
 		switch function {
 		case "stat":
-			stat, err := source.Status(file)
+			stat, err := source.Status(fullPath)
 			if err != nil {
 				context.JSON(http.StatusInternalServerError, base.R[any]{
 					Code:    "500",
@@ -330,7 +330,7 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 				},
 			})
 		case "ls":
-			files, err := source.List(file)
+			files, err := source.List(fullPath)
 			if err != nil {
 				context.JSON(http.StatusInternalServerError, base.R[any]{
 					Code:    "500",
@@ -341,7 +341,7 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 
 			previewableFiles := make([]PreviewableFile, len(files))
 			for i, f := range files {
-				key, preview, _ := GetPreview(repo, datasource, f.Name)
+				key, preview, _ := GetPreview(repo, datasource, source.PathJoin(file, f.Name))
 				previewableFiles[i] = PreviewableFile{
 					Key:     key,
 					Stat:    f,
@@ -357,7 +357,7 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 			context.Status(http.StatusOK)
 			context.Writer.WriteHeaderNow()
 
-			err := source.Concatenate(file, context.Writer)
+			err := source.Concatenate(fullPath, context.Writer)
 			if err != nil {
 				log.Println("failed to redirect data:", err)
 				return
