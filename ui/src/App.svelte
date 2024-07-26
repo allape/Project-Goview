@@ -3,6 +3,7 @@
 	import type { IDatasource } from './api/datasource';
 	import type { IR } from './api/http';
 	import { BASE_URL } from './config/server';
+	import { GenerationQueue } from './context/generation-queue';
 	import DatasourceModalButton from './lib/DatasourceModalButton.svelte';
 	import FileExplorer from './lib/FileExplorer.svelte';
 
@@ -10,8 +11,6 @@
 
 	let selectedDatasourceID: IDatasource['id'] | undefined;
 	let datasource: IDatasource | undefined;
-
-	let taskCount = 0;
 
 	function handleDatasourcesChanged(e: CustomEvent<IDatasource[]>) {
 		datasources = e.detail;
@@ -28,8 +27,12 @@
 	onMount(() => {
 		const sse = new EventSource(`${BASE_URL}/preview/task/count/sse`);
 		sse.addEventListener('EVENT_PREVIEW_TASK_COUNT', e => {
-			const data: IR<number> = JSON.parse(e.data);
-			taskCount = data.d;
+			const data: IR<string> = JSON.parse(e.data);
+			try {
+				GenerationQueue.set(JSON.parse(data.d) || []);
+			} catch (e) {
+				console.error('[SSE] EVENT_PREVIEW_TASK_COUNT:', e);
+			}
 		});
 		sse.addEventListener('error', e => {
 			console.error('[SSE] error:', e);
@@ -87,7 +90,7 @@
 <div class="wrapper">
 	<div class="buttons">
 		<div>
-			<div class="taskCount">Remained: {taskCount.toLocaleString()}</div>
+			<div class="taskCount">Remained: {$GenerationQueue.length.toLocaleString()}</div>
 		</div>
 		<div class="full">
 			<select bind:value={selectedDatasourceID}>

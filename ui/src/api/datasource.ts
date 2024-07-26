@@ -3,6 +3,8 @@ import { BASE_URL } from '../config/server';
 import ajax, { type IBaseModel } from './http';
 import type { IPreview } from './preview';
 
+export type FileKey = string;
+
 export interface IFile {
   isDir: boolean;
   name: string;
@@ -14,6 +16,7 @@ export interface IFile {
 }
 
 export interface IPreviewFile {
+  key: FileKey;
   stat: IFile;
   preview?: IPreview;
 }

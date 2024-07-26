@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"github.com/allape/goview/assets"
 	"github.com/allape/goview/base"
-	"github.com/allape/goview/counter"
 	"github.com/allape/goview/datasource/driver"
 	"github.com/allape/goview/datasource/driver/dufs"
 	"github.com/allape/goview/datasource/driver/local"
 	"github.com/allape/goview/env"
+	"github.com/allape/goview/queue"
 	"github.com/allape/goview/rx"
 	"github.com/allape/goview/util"
 	"github.com/gin-contrib/sse"
@@ -85,18 +85,21 @@ func GetDriver(t Type) (driver.Driver, error) {
 
 // endregion
 
+type FileKey string
+
 type PreviewableFile struct {
+	Key     FileKey     `json:"key"`
 	Stat    driver.File `json:"stat"`
 	Preview *Preview    `json:"preview"`
 }
 
 type Preview struct {
 	base.Model
-	DatasourceID uint   `json:"datasourceId"`
-	Key          string `json:"key" gorm:"uniqueIndex;type:varchar(255)"`
-	Digest       string `json:"digest"`
-	Cover        string `json:"cover"`
-	FFProbeInfo  string `json:"ffprobeInfo"`
+	DatasourceID uint    `json:"datasourceId"`
+	Key          FileKey `json:"key" gorm:"uniqueIndex;type:varchar(255)"`
+	Digest       string  `json:"digest"`
+	Cover        string  `json:"cover"`
+	FFProbeInfo  string  `json:"ffprobeInfo"`
 }
 
 type Datasource struct {
@@ -106,33 +109,36 @@ type Datasource struct {
 	Cwd  string `json:"cwd"`
 }
 
-var GenerationCounter counter.AtomicCounter
-var GenerationBroadcast = rx.New[int64](99)
+var GenerationQueue = queue.NewAtomicQueue[FileKey]()
+var GenerationBroadcast = rx.New[struct{}](99)
 var GeneratePreviewLocker = make(chan struct{}, 1)
 
-func BuildPreviewKey(datasource Datasource, file string) string {
-	return fmt.Sprintf("goview://%d?file=%s", datasource.ID, url.QueryEscape(file))
+func BuildPreviewKey(datasource Datasource, file string) FileKey {
+	return FileKey(fmt.Sprintf("goview://%d?file=%s", datasource.ID, url.QueryEscape(file)))
 }
 
-func GetPreview(repo *gorm.DB, datasource Datasource, file string) (*Preview, error) {
+func GetPreview(repo *gorm.DB, datasource Datasource, file string) (FileKey, *Preview, error) {
+	key := BuildPreviewKey(datasource, file)
 	var pre Preview
-	err := repo.First(&pre, "`key` = ?", BuildPreviewKey(datasource, file)).Error
+	err := repo.First(&pre, "`key` = ?", key).Error
 	if err != nil {
-		return nil, err
+		return key, nil, err
 	}
 	if pre.ID == 0 {
-		return nil, errors.New("preview not found")
+		return key, nil, errors.New("preview not found")
 	}
-	return &pre, nil
+	return key, &pre, nil
 }
 
 func GeneratePreview(source driver.Driver, datasource Datasource, sourceFile, dstFolder string, finder func(digest string) (*Preview, error)) (*Preview, error) {
-	GenerationCounter.Increment()
-	GenerationBroadcast.Send(GenerationCounter.Value())
+	key := BuildPreviewKey(datasource, sourceFile)
+
+	GenerationQueue.Push(key)
+	GenerationBroadcast.Send(struct{}{})
 	GeneratePreviewLocker <- struct{}{}
 	defer func() {
-		GenerationCounter.Decrement()
-		GenerationBroadcast.Send(GenerationCounter.Value())
+		GenerationQueue.Remove(key)
+		GenerationBroadcast.Send(struct{}{})
 		<-GeneratePreviewLocker
 	}()
 
@@ -162,8 +168,6 @@ func GeneratePreview(source driver.Driver, datasource Datasource, sourceFile, ds
 	if err != nil {
 		return nil, err
 	}
-
-	key := BuildPreviewKey(datasource, sourceFile)
 
 	found, err := finder(digest)
 	if err == nil {
@@ -316,10 +320,11 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 				})
 				return
 			}
-			preview, _ := GetPreview(repo, datasource, file)
+			key, preview, _ := GetPreview(repo, datasource, file)
 			context.JSON(http.StatusOK, base.R[PreviewableFile]{
 				Code: "200",
 				Data: PreviewableFile{
+					Key:     key,
 					Stat:    *stat,
 					Preview: preview,
 				},
@@ -336,8 +341,9 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 
 			previewableFiles := make([]PreviewableFile, len(files))
 			for i, f := range files {
-				preview, _ := GetPreview(repo, datasource, f.Name)
+				key, preview, _ := GetPreview(repo, datasource, f.Name)
 				previewableFiles[i] = PreviewableFile{
+					Key:     key,
 					Stat:    f,
 					Preview: preview,
 				}
@@ -435,7 +441,7 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 
 		file := context.Param("file")[1:]
 
-		pre, err := GetPreview(repo, datasource, file)
+		_, pre, err := GetPreview(repo, datasource, file)
 		if err != nil {
 			context.Redirect(http.StatusFound, NoPreviewRouter)
 			return
@@ -458,7 +464,7 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 
 		file := context.Param("file")[1:]
 
-		pre, err := GetPreview(repo, datasource, file)
+		_, pre, err := GetPreview(repo, datasource, file)
 		if err != nil {
 			context.JSON(http.StatusNotFound, base.R[any]{
 				Code:    "404",
@@ -490,12 +496,17 @@ func Setup(repo *gorm.DB, rout *gin.Engine, previewFolder string) error {
 
 		subscription := GenerationBroadcast.Subscribe()
 
-		for count := range subscription.Channel {
-			err := sse.Encode(context.Writer, sse.Event{
+		for range subscription.Channel {
+			j, err := GenerationQueue.JSON()
+			if err != nil {
+				log.Println("Preview task sse json error:", err)
+				break
+			}
+			err = sse.Encode(context.Writer, sse.Event{
 				Event: SSETaskCount,
-				Data: base.R[int64]{
+				Data: base.R[string]{
 					Code: "200",
-					Data: count,
+					Data: j,
 				},
 			})
 			if err != nil {

@@ -1,5 +1,7 @@
 <script lang="ts">
-  let loading: boolean = false;
+  import { onMount } from 'svelte';
+
+  export let loading: boolean = false;
   let step: number = 0;
 
   let timerId = -1;
@@ -13,16 +15,37 @@
       return;
     }
     loading = true;
-    clearInterval(timerId);
-    timerId = setInterval(() => {
-      step = (step + 1) % LoadingChars.length;
-    }, 100);
     try {
       await onClick();
     } finally {
       loading = false;
     }
   }
+
+  function startLoadingText() {
+    clearInterval(timerId);
+    timerId = setInterval(() => {
+      step = (step + 1) % LoadingChars.length;
+    }, 100);
+  }
+
+  function stopLoadingText() {
+    clearInterval(timerId);
+  }
+
+  $: {
+    if (loading) {
+      startLoadingText();
+    } else {
+      stopLoadingText();
+    }
+  }
+
+  onMount(() => {
+    return () => {
+      stopLoadingText();
+    };
+  });
 </script>
 
 <style lang="scss">

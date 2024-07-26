@@ -3,6 +3,7 @@
   import { gen } from '../api/preview';
   import CDDotDot from '../asset/i_v_cd...jpg';
   import Folder from '../asset/i_v_folder.jpg';
+  import { GenerationQueue } from '../context/generation-queue';
   import Button from './Button.svelte';
 
   const SEP = '/';
@@ -249,7 +250,7 @@
         </div>
         <div class="buttons">
           {#if !file.stat.isDir}
-            <Button onClick={() => genPreview(file.stat)}>Gen Preview</Button>
+            <Button onClick={() => genPreview(file.stat)} loading={$GenerationQueue.includes(file.key)}>Gen Preview</Button>
             <button on:click={() => window.open(file.stat._cover)}>Open</button>
           {/if}
         </div>
