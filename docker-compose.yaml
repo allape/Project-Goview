@@ -10,6 +10,8 @@ services:
       - ./preview:/preview
     ports:
       - "9090:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
 #      http_proxy: http://host.docker.internal:1080
 #      https_proxy: http://host.docker.internal:1080
