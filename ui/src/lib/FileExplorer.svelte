@@ -54,19 +54,21 @@
     }
   }
 
-  async function genPreview(file: IFile) {
+  async function genPreview(file: IFile, notify = true) {
     if (file.isDir) {
       return;
     }
     await gen(datasource!.id, cwd + file.name);
-    alert('Done Gen Preview');
+    if (notify) {
+      alert('Done Gen Preview');
+    }
     render().then();
   }
 
   async function genAll() {
     files.forEach(file => {
       if (!file.stat.isDir) {
-        genPreview(file.stat).then();
+        genPreview(file.stat, false).then();
       }
     });
   }
