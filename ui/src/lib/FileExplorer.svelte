@@ -63,6 +63,14 @@
     render().then();
   }
 
+  async function genAll() {
+    files.forEach(file => {
+      if (!file.stat.isDir) {
+        genPreview(file.stat).then();
+      }
+    });
+  }
+
   function onCdDotDot() {
     const parts = cwd.split(SEP);
     parts.pop();
@@ -115,6 +123,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        gap: 10px;
       }
     }
 
@@ -215,7 +224,8 @@
       <input type="text" placeholder="cwd" bind:value={cwd}>
     </div>
     <div class="buttons">
-      <Button onClick={render}>Refresh</Button>
+      <Button disabled={!datasource} onClick={render}>Refresh</Button>
+      <Button disabled={!files.find(file => !file.stat.isDir)} onClick={genAll}>Gen All</Button>
     </div>
   </div>
   <div class="files">

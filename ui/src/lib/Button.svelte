@@ -46,6 +46,8 @@
       stopLoadingText();
     };
   });
+
+  console.log($$props);
 </script>
 
 <style lang="scss">
@@ -64,7 +66,7 @@
   }
 </style>
 
-<button {...$$props} class:button={true} disabled={loading} on:click={handleClick}>
+<button {...$$props} class:button={true} disabled={loading || $$props.disabled} on:click={handleClick}>
   <span class="loadingText" style:opacity={loading ? 1 : 0}>
     {LoadingChars[step]}
   </span>
