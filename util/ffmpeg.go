@@ -142,7 +142,7 @@ func FFMpegScaleImage(dst, src string, scale float64) (CommandOutput, error) {
 	return cmd.CombinedOutput()
 }
 
-func FFMpegVideoSampleImage(video, image string, scale int, tile image.Point) (CommandOutput, error) {
+func FFMpegVideoSampleImage(video, image string, scale float64, tile image.Point) (CommandOutput, error) {
 	ffprobe, err := FFProbe(video)
 	if err != nil {
 		return nil, err
@@ -165,10 +165,10 @@ func FFMpegVideoSampleImage(video, image string, scale int, tile image.Point) (C
 		"vfr",
 		"-vf",
 		fmt.Sprintf(
-			"select='isnan(prev_selected_t)+gte(t-prev_selected_t\\,%.02f)',scale=%d:%d,tile=%dx%d",
+			"select='isnan(prev_selected_t)+gte(t-prev_selected_t\\,%.02f)',scale=%.02f:%.02f,tile=%dx%d",
 			duration.Seconds()/float64(tile.X*tile.Y),
-			size.X/scale,
-			size.Y/scale,
+			float64(size.X)*scale,
+			float64(size.Y)*scale,
 			tile.X,
 			tile.Y,
 		),
@@ -177,4 +177,29 @@ func FFMpegVideoSampleImage(video, image string, scale int, tile image.Point) (C
 		image,
 	)
 	return cmd.CombinedOutput()
+}
+
+func ExifToolPreview(dst, src string) error {
+	cmd := exec.Command(
+		"exiftool",
+		"-b",
+		"-PreviewImage",
+		src,
+	)
+	bs, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(bs)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

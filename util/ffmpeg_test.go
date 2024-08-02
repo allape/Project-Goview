@@ -10,7 +10,7 @@ func TestFFMpegVideoSampleImage(t *testing.T) {
 	// NOTE: put a video file into ../samples which is ignored by Git
 	videoFile := "../samples/1.m4v"
 
-	output, err := FFMpegVideoSampleImage(videoFile, "../preview/1.m4v.jpg", 10, image.Point{X: 10, Y: 10})
+	output, err := FFMpegVideoSampleImage(videoFile, "../preview/1.m4v.jpg", 0.1, image.Point{X: 10, Y: 10})
 	if err != nil {
 		t.Error(err)
 	}

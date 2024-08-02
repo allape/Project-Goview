@@ -191,21 +191,37 @@ func GeneratePreview(source driver.Driver, datasource Datasource, sourceFile, ds
 		return nil, err
 	}
 
-	dtsFile := digest + ".jpg"
+	dstFile := digest + ".jpg"
 
 	prev.FFProbeInfo, err = util.FFProbeInfo(tmpFile.Name())
 	if err != nil {
 		return nil, err
 	}
 
+	dstFullPath := path.Join(dstFolder, dstFile)
+
 	switch fileType.MIME.Type {
 	case "image":
-		_, err = util.FFMpegScaleImage(path.Join(dstFolder, dtsFile), tmpFile.Name(), 0.1)
-		if err != nil {
-			return nil, err
+		ext := strings.ToLower(path.Ext(tmpFile.Name()))
+		switch ext {
+		case ".gif":
+			_, err = util.FFMpegVideoSampleImage(tmpFile.Name(), dstFullPath, 0.5, image.Point{X: 2, Y: 2})
+			if err != nil {
+				return nil, err
+			}
+		case ".arw":
+			err = util.ExifToolPreview(dstFullPath, tmpFile.Name())
+			if err != nil {
+				return nil, err
+			}
+		default:
+			_, err = util.FFMpegScaleImage(dstFullPath, tmpFile.Name(), 0.1)
+			if err != nil {
+				return nil, err
+			}
 		}
 	case "video":
-		_, err = util.FFMpegVideoSampleImage(tmpFile.Name(), path.Join(dstFolder, dtsFile), 4, image.Point{X: 10, Y: 10})
+		_, err = util.FFMpegVideoSampleImage(tmpFile.Name(), dstFullPath, 0.25, image.Point{X: 10, Y: 10})
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +229,7 @@ func GeneratePreview(source driver.Driver, datasource Datasource, sourceFile, ds
 		return nil, errors.New("not supported")
 	}
 
-	prev.Cover = dtsFile
+	prev.Cover = dstFile
 
 	return &prev, nil
 }
