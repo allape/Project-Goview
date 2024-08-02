@@ -14,6 +14,8 @@
   export let cwd: string = '';
 
   export let files: IPreviewFile[] = [];
+  let fileCount = 0;
+  let folderCount = 0;
 
   async function render() {
     if (!datasource || loading) {
@@ -40,6 +42,9 @@
           }
         });
       }
+
+      fileCount = files.filter(file => !file.stat.isDir).length;
+      folderCount = files.length - fileCount;
     } finally {
       loading = false;
     }
@@ -129,11 +134,16 @@
       }
     }
 
+    .statistic {
+      padding-bottom: 10px;
+      text-align: center;
+    }
+
     .files {
       flex: 1;
       display: flex;
       justify-content: flex-start;
-      align-items: stretch;
+      align-items: flex-start;
       gap: 10px;
       flex-wrap: wrap;
       overflow-y: auto;
@@ -147,11 +157,13 @@
       }
 
       .file {
-        width: 180px;
+        width: 200px;
+        height: 330px;
         display: flex;
         flex-direction: column;
         border: 1px solid lightgray;
         position: relative;
+        transition: 0.2s;
 
         &.folder {
           cursor: pointer;
@@ -172,6 +184,10 @@
           .fullname {
             display: block;
           }
+        }
+
+        &:hover {
+          box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.3);
         }
 
         .preview {
@@ -202,8 +218,8 @@
             position: absolute;
             bottom: 0;
             left: 0;
-            width: 100%;
-            white-space: pre-wrap;
+            width: calc(100% - 10px);
+            white-space: wrap;
             display: none;
           }
         }
@@ -230,6 +246,7 @@
       <Button disabled={!files.find(file => !file.stat.isDir)} onClick={genAll}>Gen All</Button>
     </div>
   </div>
+  <div class="statistic">{folderCount} folder{folderCount > 1 ? 's' : ''}, {fileCount} file{fileCount > 1 ? 's' : ''}</div>
   <div class="files">
     {#if loading}
       Loading...
@@ -262,8 +279,9 @@
         </div>
         <div class="buttons">
           {#if !file.stat.isDir}
-            <Button onClick={() => genPreview(file.stat)} loading={$GenerationQueue.includes(file.key)}>Gen Preview</Button>
-            <button on:click={() => window.open(file.stat._cover)}>Open</button>
+            <button on:click={() => window.open(file.stat._fileURL)}>Open</button>
+            <Button onClick={() => genPreview(file.stat)} loading={$GenerationQueue.includes(file.key)}>Gen</Button>
+            <button on:click={() => window.open(file.stat._cover)}>Preview</button>
           {/if}
         </div>
       </div>

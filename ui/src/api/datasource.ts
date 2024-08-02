@@ -13,6 +13,7 @@ export interface IFile {
   _displayName: string;
   _path: string;
   _cover: string;
+  _fileURL: string;
 }
 
 export interface IPreviewFile {
@@ -56,6 +57,7 @@ export async function ls(dsid: IDatasource['id'], cwd: string): Promise<IPreview
     file._displayName = `${file.name}${file.isDir ? '/' : ''}`;
     file._path = `${cwd}${encodeURIComponent(file._displayName)}`;
     file._cover = pf.preview?.cover ? `${BASE_URL}/preview/static/${pf.preview.cover}` : `${BASE_URL}/preview/image/no-preview.jpg`;
+    file._fileURL = `${BASE_URL}/datasource/cat/${dsid}/${file._path}`;
     return pf;
   });
 }
