@@ -107,6 +107,10 @@ export default function DatasourceBar({
         title: "ID",
       },
       {
+        dataIndex: "key",
+        title: "Key",
+      },
+      {
         dataIndex: "name",
         title: "Name",
         render: (v, record) => (
@@ -202,6 +206,9 @@ export default function DatasourceBar({
           >
             <Form.Item name="name" label="Name" rules={[{ required: true }]}>
               <Input placeholder="Name is required!" maxLength={200} />
+            </Form.Item>
+            <Form.Item name="key" label="Key" rules={[{ required: true }]}>
+              <Input placeholder="Key is required!" maxLength={200} />
             </Form.Item>
             <Form.Item name="color" label="Color">
               <Input type="color" />
