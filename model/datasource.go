@@ -3,8 +3,8 @@ package model
 import (
 	"crypto/tls"
 	"errors"
-	vfs "github.com/allape/go-http-vfs"
 	"github.com/allape/gocrud"
+	"github.com/allape/gohtvfs"
 	"github.com/allape/goview/env"
 	"io"
 	"io/fs"
@@ -28,7 +28,7 @@ func (f *LocalFS) ReadDir(name string) ([]fs.DirEntry, error) {
 
 type DuFS struct {
 	DatasourceFS
-	dufs *vfs.DufsVFS
+	dufs *gohtvfs.DufsVFS
 }
 
 func (f *DuFS) Open(name string) (File, error) {
@@ -36,7 +36,7 @@ func (f *DuFS) Open(name string) (File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return file.(*vfs.DufsFile), nil
+	return file.(*gohtvfs.DufsFile), nil
 }
 
 func (f *DuFS) ReadDir(name string) ([]fs.DirEntry, error) {
@@ -83,7 +83,7 @@ func GetFS(datasource Datasource) (DatasourceFS, error) {
 			},
 		}
 
-		dufs, err := vfs.NewDufsVFS(datasource.Cwd)
+		dufs, err := gohtvfs.NewDufsVFS(datasource.Cwd)
 		if err != nil {
 			return nil, err
 		}

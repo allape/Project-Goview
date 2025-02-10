@@ -3,10 +3,10 @@ module github.com/allape/goview
 go 1.23.5
 
 require (
-	github.com/allape/go-http-vfs v0.0.0-20250210093330-3572b6e3d275
 	github.com/allape/gocrud v0.0.0-20250207100459-366b11123a9e
 	github.com/allape/goenv v0.0.0-20241202051618-ce41afb81ebf
 	github.com/allape/gogger v0.0.0-20241208090122-dda745ad2428
+	github.com/allape/gohtvfs v0.0.0-20250210125608-2707ce82c590
 	github.com/fogleman/gg v1.3.0
 	github.com/gin-contrib/cors v1.7.3
 	github.com/gin-gonic/gin v1.10.0
