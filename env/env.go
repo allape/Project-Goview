@@ -1,23 +1,21 @@
 package env
 
+import "github.com/allape/goenv"
+
 const (
-	// TrustedCerts
-	// Cert files separated by comma
-	TrustedCerts = "GOVIEW_TRUSTED_CERTS"
+	trustedCerts  = "GOVIEW_TRUSTED_CERTS"
+	uiIndexHTML   = "GOVIEW_UI_INDEX_HTML"
+	previewFolder = "GOVIEW_PREVIEW_FOLDER"
+	bindAddr      = "GOVIEW_BIND_ADDR"
+	enbaleCors    = "GOVIEW_ENABLE_CORS"
+	databaseDSN   = "GOVIEW_DATABASE_DSN"
+)
 
-	// UIIndexHTML
-	// The index.html rendered in path of "/"
-	UIIndexHTML = "GOVIEW_UI_INDEX_HTML"
-
-	// PreviewFolder
-	// Folder to store preview files
-	PreviewFolder = "GOVIEW_PREVIEW_FOLDER"
-
-	// HttpBinding
-	// Port to run the server
-	HttpBinding = "GOVIEW_HTTP_BINDING"
-
-	// DatabaseURL
-	// Database URL in format like "user:password@tcp(host:port)/database"
-	DatabaseURL = "GOVIEW_DATABASE_URL"
+var (
+	TrustedCerts  = goenv.Getenv(trustedCerts, "")
+	UIIndexHTML   = goenv.Getenv(uiIndexHTML, "./ui/dist/index.html")
+	PreviewFolder = goenv.Getenv(previewFolder, "./preview")
+	BindAddr      = goenv.Getenv(bindAddr, ":8080")
+	EnableCors    = goenv.Getenv(enbaleCors, true)
+	DatabaseDSN   = goenv.Getenv(databaseDSN, "root:Root_123456@tcp(localhost:3306)/goview?charset=utf8mb4&parseTime=True&loc=Local")
 )

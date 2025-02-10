@@ -2,13 +2,12 @@ package env
 
 import (
 	"crypto/x509"
-	"github.com/allape/goenv"
 	"os"
 	"strings"
 )
 
 func TrustedCertsPoolFromEnv() (*x509.CertPool, error) {
-	certs := strings.Split(goenv.Getenv(TrustedCerts, ""), ",")
+	certs := strings.Split(TrustedCerts, ",")
 
 	caCertPool := x509.NewCertPool()
 

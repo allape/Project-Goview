@@ -2,6 +2,8 @@ package assets
 
 import _ "embed"
 
+var MIMEType = "image/jpeg"
+
 //go:embed i_v_404.jpg
 var IV404 []byte
 

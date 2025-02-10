@@ -1,94 +1,80 @@
 package main
 
 import (
-	"database/sql"
-	"github.com/allape/goenv"
-	"github.com/allape/goview/datasource"
+	"github.com/allape/gocrud"
+	"github.com/allape/gogger"
+	"github.com/allape/goview/controller"
 	"github.com/allape/goview/env"
+	"github.com/allape/goview/model"
+	"github.com/allape/goview/util"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
+	"gorm.io/gorm/logger"
 	"time"
 )
 
-const TAG = "[main]"
-
-var rout *gin.Engine
-var repo *gorm.DB
-
-func SetupRepo() (*gorm.DB, error) {
-	log.Println(TAG, "opening database")
-	db, err := sql.Open(
-		"mysql",
-		goenv.Getenv(
-			env.DatabaseURL,
-			"root:Root_123456@(127.0.0.1:3306)/goview?charset=utf8mb4&parseTime=true",
-		),
-	)
-	if err != nil {
-		return nil, err
-	}
-	db.SetConnMaxLifetime(time.Minute * 3)
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(10)
-
-	log.Println(TAG, "pinging database")
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-
-	rep, err := gorm.Open(mysql.New(mysql.Config{
-		Conn: db,
-	}))
-	if err != nil {
-		return nil, err
-	}
-
-	return rep, nil
-}
+var l = gogger.New("main")
 
 func main() {
-	var err error
-
-	repo, err = SetupRepo()
+	err := gogger.InitFromEnv()
 	if err != nil {
-		log.Fatal(TAG, " setup repo: ", err)
+		l.Error().Fatalln(err)
 	}
 
-	rout = gin.New()
-	rout.Use(cors.Default())
-
-	indexHTML := goenv.Getenv(env.UIIndexHTML, "ui/dist/index.html")
-	rout.StaticFile("/", indexHTML)
-	rout.StaticFile("/index", indexHTML)
-	rout.StaticFile("/index.htm", indexHTML)
-	rout.StaticFile("/index.html", indexHTML)
-
-	// region logic
-
-	err = datasource.Setup(repo, rout, goenv.Getenv(env.PreviewFolder, "preview"))
+	db, err := gorm.Open(mysql.Open(env.DatabaseDSN), &gorm.Config{
+		Logger: logger.New(gogger.New("db").Debug(), logger.Config{
+			SlowThreshold: 200 * time.Millisecond,
+			LogLevel:      logger.Info,
+			Colorful:      true,
+		}),
+	})
 	if err != nil {
-		log.Fatal(TAG, " setup datasource: ", err)
+		l.Error().Fatalln(err)
 	}
 
-	// endregion
+	err = db.AutoMigrate(&model.Datasource{}, &model.Preview{}, &model.Tag{})
+	if err != nil {
+		l.Error().Fatalf("Failed to auto migrate database: %v", err)
+	}
+
+	engine := gin.Default()
+
+	if env.EnableCors {
+		engine.Use(cors.Default())
+	}
+
+	err = gocrud.NewSingleHTMLServe(engine.Group("ui"), env.UIIndexHTML, &gocrud.SingleHTMLServeConfig{
+		AllowReplace: true,
+	})
+	if err != nil {
+		l.Error().Fatalf("Failed to setup ui controller: %v", err)
+	}
+
+	apiGroup := engine.Group("api")
+
+	err = controller.SetupDatasourceController(apiGroup.Group("datasource"), db)
+	if err != nil {
+		l.Error().Fatalf("Failed to setup datasource controller: %v", err)
+	}
+
+	err = controller.SetupPreviewController(apiGroup.Group("preview"), db)
+	if err != nil {
+		l.Error().Fatalf("Failed to setup preview controller: %v", err)
+	}
+
+	err = controller.SetupTagController(apiGroup.Group("tag"), db)
+	if err != nil {
+		l.Error().Fatalf("Failed to setup tag controller: %v", err)
+	}
 
 	go func() {
-		err = rout.Run(goenv.Getenv(env.HttpBinding, ":8080"))
+		err := engine.Run(env.BindAddr)
 		if err != nil {
-			log.Fatal(TAG, " run: ", err)
+			l.Error().Fatalf("Failed to start http server: %v", err)
 		}
 	}()
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	log.Println(TAG, "started")
-	sig := <-sigs
-	log.Println(TAG, "exiting with", sig)
+	util.Wait4CtrlC()
 }

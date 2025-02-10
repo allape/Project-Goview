@@ -1,49 +1,42 @@
-FROM node:21.7.3 AS ui_builder
-
-RUN npm config --global set proxy "$http_proxy" && \
-    npm config --global set https-proxy "$http_proxy"
+FROM node:22 AS ui_builder
 
 WORKDIR /build
 
 COPY ui/package.json        .
 COPY ui/package-lock.json   .
 
-RUN npm i
+RUN npm install --no-audit
 
 COPY ui .
 
 RUN npm run build
 
-FROM alpine:3.19.1 AS builder
-
-ARG GO_BINARY_NAME="go1.22.5.linux-amd64.tar.gz"
+FROM golang:1.23.5-alpine3.20 AS builder
 
 WORKDIR /build
-
-RUN apk update && apk add wget curl
-RUN wget "https://go.dev/dl/$GO_BINARY_NAME" && tar -C /usr/local -xzf $GO_BINARY_NAME
 
 COPY go.mod go.mod
 COPY go.sum go.sum
 RUN /usr/local/go/bin/go mod download
 
-# GCC
-RUN apk update && apk add build-base
-
 COPY . .
 RUN /usr/local/go/bin/go build -o app
 
-FROM alpine:3.19.1
+FROM alpine:3.20
 
 WORKDIR /app
 
 RUN apk update && apk add ffmpeg exiftool
 
-COPY --from=ui_builder /build/dist assets
+COPY --from=ui_builder /build/dist ui
 COPY --from=builder /build/app app
 
 EXPOSE 8080
 
 CMD [ "/app/app" ]
 
-# docker build -t allape/goview .
+### build ###
+# export docker_http_proxy=http://host.docker.internal:1080
+# docker build --platform linux/amd64 --build-arg http_proxy=$docker_http_proxy --build-arg https_proxy=$docker_http_proxy -f Dockerfile -t allape/goview:latest .
+# docker tag allape/goview:latest docker-registry.lan.allape.cc/allape/goview:latest
+# docker push docker-registry.lan.allape.cc/allape/goview:latest
