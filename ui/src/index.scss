@@ -1,0 +1,15 @@
+html {
+  background-color: lightgray;
+  @media (prefers-color-scheme: dark) {
+    background-color: #333;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.ant-table-thead {
+  line-height: 0.5;
+}

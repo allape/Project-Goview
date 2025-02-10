@@ -23,12 +23,28 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 			return
 		}
 
+		key := model.BuildPreviewKey(datasource, filename)
+
+		var found model.Preview
+		if err := db.Model(&found).First(&found, "`key` = ?", key).Error; err == nil {
+			context.JSON(http.StatusOK, gocrud.R[model.Preview]{
+				Code: gocrud.RestCoder.OK(),
+				Data: found,
+			})
+			return
+		}
+
 		preview, err := model.GeneratePreview(datasource, filename, env.PreviewFolder, func(digest string) (*model.Preview, error) {
 			var pre model.Preview
 			err := db.Model(&pre).First(&pre, "`digest` = ?", digest).Error
 			return &pre, err
 		})
 		if err != nil {
+			gocrud.MakeErrorResponse(context, gocrud.RestCoder.InternalServerError(), err.Error())
+			return
+		}
+
+		if err := db.Save(preview).Error; err != nil {
 			gocrud.MakeErrorResponse(context, gocrud.RestCoder.InternalServerError(), err.Error())
 			return
 		}
@@ -45,6 +61,7 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 
 		var datasource model.Datasource
 		if err := db.Model(&datasource).First(&datasource, datasourceId).Error; err != nil {
+			context.Header("Cache-Control", "no-cache")
 			context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
 			return
 		}
@@ -53,6 +70,7 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 
 		var preview model.Preview
 		if err := db.Model(&preview).First(&preview, "`key` =? ", key).Error; err != nil {
+			context.Header("Cache-Control", "no-cache")
 			context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
 			return
 		}
@@ -61,14 +79,20 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 
 		stat, err := os.Stat(cover)
 		if err != nil {
+			context.Header("Cache-Control", "no-cache")
 			context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
 			return
 		} else if stat.IsDir() {
+			context.Header("Cache-Control", "no-cache")
 			context.Data(http.StatusMethodNotAllowed, assets.MIMEType, assets.IVNoPreview)
 			return
 		}
 
 		context.File(cover)
+	})
+
+	group.GET("/no-preview", func(context *gin.Context) {
+		context.Data(http.StatusOK, assets.MIMEType, assets.IVNoPreview)
 	})
 
 	return nil

@@ -1,19 +1,12 @@
 package model
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
-	vfs "github.com/allape/go-http-vfs"
 	"github.com/allape/gocrud"
-	"github.com/allape/goview/env"
 	"github.com/allape/goview/util"
 	"github.com/h2non/filetype"
-	"gorm.io/gorm"
 	"image"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -21,37 +14,20 @@ import (
 	"time"
 )
 
-type PreviewableFile interface {
-	io.ReaderFrom
-	Stat() (os.FileInfo, error)
-}
-
 type FileKey string
 
 type Preview struct {
 	gocrud.Base
 	DatasourceID gocrud.ID `json:"datasourceId"`
-	Key          FileKey   `json:"key" gorm:"uniqueIndex"`
-	Digest       string    `json:"digest" gorm:"uniqueIndex;type:varchar(64)"`
+	Key          FileKey   `json:"key"`
+	Digest       string    `json:"digest" gorm:"type:varchar(64)"`
 	Cover        string    `json:"cover"`
+	MIME         string    `json:"mime"`
 	FFProbeInfo  string    `json:"ffprobeInfo"`
 }
 
 func BuildPreviewKey(datasource Datasource, file string) FileKey {
-	return FileKey(fmt.Sprintf("goview://%d?file=%s", datasource.ID, url.QueryEscape(file)))
-}
-
-func GetPreview(repo *gorm.DB, datasource Datasource, file string) (FileKey, *Preview, error) {
-	key := BuildPreviewKey(datasource, file)
-	var pre Preview
-	err := repo.First(&pre, "`key` = ?", key).Error
-	if err != nil {
-		return key, nil, err
-	}
-	if pre.ID == 0 {
-		return key, nil, errors.New("preview not found")
-	}
-	return key, &pre, nil
+	return FileKey(fmt.Sprintf("goview://%d%s", datasource.ID, file))
 }
 
 var locker = &sync.Mutex{}
@@ -62,44 +38,14 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 	locker.Lock()
 	defer locker.Unlock()
 
-	var file PreviewableFile
+	dfs, err := GetFS(datasource)
+	if err != nil {
+		return nil, err
+	}
 
-	switch datasource.Type {
-	case DUFS:
-		caCertPool, err := env.TrustedCertsPoolFromEnv()
-		if err != nil {
-			return nil, err
-		}
-		tlsConfig := &tls.Config{
-			RootCAs: caCertPool,
-		}
-		client := &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-		}
-
-		dufs, err := vfs.NewDufsVFS(datasource.Cwd)
-		if err != nil {
-			return nil, err
-		}
-		dufs.SetHttpClient(client)
-
-		dufsFile, err := dufs.Open(srcFile)
-		if err != nil {
-			return nil, err
-		}
-
-		file = dufsFile.(*vfs.DufsFile)
-	case LOCAL:
-		f, err := os.Open(srcFile)
-		if err != nil {
-			return nil, err
-		}
-
-		file = f
-	default:
-		return nil, errors.New("datasource not supported")
+	file, err := dfs.Open(srcFile)
+	if err != nil {
+		return nil, err
 	}
 
 	stat, err := file.Stat()
@@ -109,7 +55,7 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 		return nil, errors.New("can not preview a directory")
 	}
 
-	tmpFile, err := os.CreateTemp(os.TempDir(), "goview_*_"+stat.Name())
+	tmpFile, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("goview_*%s", path.Ext(stat.Name())))
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +63,7 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 		_ = tmpFile.Close()
 	}()
 
-	n, err := file.ReadFrom(tmpFile)
+	n, err := file.WriteTo(tmpFile)
 	if err != nil {
 		return nil, err
 	} else if n != stat.Size() {
@@ -140,15 +86,16 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 		return found, nil
 	}
 
-	prev := Preview{
-		DatasourceID: datasource.ID,
-		Key:          key,
-		Digest:       digest,
-	}
-
 	fileType, err := filetype.MatchFile(tmpFile.Name())
 	if err != nil {
 		return nil, err
+	}
+
+	prev := Preview{
+		DatasourceID: datasource.ID,
+		Key:          key,
+		MIME:         fileType.MIME.Value,
+		Digest:       digest,
 	}
 	dstFile := fmt.Sprintf("%s/%s.%s", digest[0:4], digest, "jpg")
 
@@ -159,8 +106,7 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 
 	fullDstFilePath := path.Join(dstFolder, dstFile)
 
-	folder := path.Dir(fullDstFilePath)
-	err = os.MkdirAll(folder, 0755)
+	err = os.MkdirAll(path.Dir(fullDstFilePath), 0755)
 	if err != nil {
 		return nil, err
 	}

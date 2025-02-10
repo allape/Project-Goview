@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/allape/gocrud"
 	"github.com/allape/gogger"
 	"github.com/allape/goview/controller"
 	"github.com/allape/goview/env"
@@ -45,9 +44,7 @@ func main() {
 		engine.Use(cors.Default())
 	}
 
-	err = gocrud.NewSingleHTMLServe(engine.Group("ui"), env.UIIndexHTML, &gocrud.SingleHTMLServeConfig{
-		AllowReplace: true,
-	})
+	err = controller.SetupUIController(engine, env.UIIndexHTML)
 	if err != nil {
 		l.Error().Fatalf("Failed to setup ui controller: %v", err)
 	}

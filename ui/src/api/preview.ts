@@ -1,15 +1,13 @@
-import type { IDatasource } from './datasource';
-import ajax, { type IBaseModel } from './http';
+import { aapi } from "@allape/gocrud-react";
+import { SERVER_URL } from "@allape/gocrud-react/src/config";
+import IDatasource from "../model/datasource.ts";
+import IPreview from "../model/preview.ts";
 
-export interface IPreview extends IBaseModel {
-  id: number;
-  datasourceId: IDatasource['id'];
-  key: string;
-  digest: string;
-  cover: string;
-}
-
-
-export function gen(dsid: IDatasource['id'], file: string): Promise<IPreview> {
-  return ajax(`/preview/gen/${dsid}/${file}`);
+export function generatePreview(
+  datasourceId: IDatasource["id"],
+  filename: string,
+): Promise<IPreview> {
+  return aapi.get(`${SERVER_URL}/preview/${datasourceId}${filename}`, {
+    method: "PUT",
+  });
 }
