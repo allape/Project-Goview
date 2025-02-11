@@ -10,10 +10,60 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
+func servePreviewByKey(context *gin.Context, db *gorm.DB, key model.FileKey) {
+	key = model.FileKey(strings.TrimSpace(string(key)))
+	if key == "" {
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
+		return
+	}
+
+	key = model.FileKey(strings.TrimPrefix(string(key), "/"))
+
+	var preview model.Preview
+	if err := db.Model(&preview).First(&preview, "`key` = ?", key).Error; err != nil {
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
+		return
+	}
+
+	cover := path.Join(env.PreviewFolder, preview.Cover)
+
+	stat, err := os.Stat(cover)
+	if err != nil {
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
+		return
+	} else if stat.IsDir() {
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusMethodNotAllowed, assets.MIMEType, assets.IVNoPreview)
+		return
+	}
+
+	context.File(cover)
+}
+
 func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
-	group.PUT("/:datasource/*filename", func(context *gin.Context) {
+	err := gocrud.New(group, db, gocrud.CRUD[model.Preview]{
+		SearchHandlers: map[string]gocrud.SearchHandler{
+			"datasourceId": gocrud.KeywordEqual("datasource_id", nil),
+			"mime":         gocrud.KeywordLike("mime", nil),
+			"key":          gocrud.KeywordLike("key", nil),
+			"ffprobeInfo":  gocrud.KeywordLike("ff_probe_info", nil),
+			"digest":       gocrud.KeywordEqual("digest", nil),
+			"deleted":      gocrud.NewSoftDeleteSearchHandler(""),
+		},
+		OnDelete: gocrud.NewSoftDeleteHandler[model.Preview](gocrud.RestCoder),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	group.PUT("/from-ds/:datasource/*filename", func(context *gin.Context) {
 		datasourceId := context.Param("datasource")
 		filename := context.Param("filename")
 
@@ -55,7 +105,7 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 		})
 	})
 
-	group.GET("/:datasource/*filename", func(context *gin.Context) {
+	group.GET("/by-ds/:datasource/*filename", func(context *gin.Context) {
 		datasourceId := context.Param("datasource")
 		filename := context.Param("filename")
 
@@ -68,27 +118,12 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 
 		key := model.BuildPreviewKey(datasource, filename)
 
-		var preview model.Preview
-		if err := db.Model(&preview).First(&preview, "`key` =? ", key).Error; err != nil {
-			context.Header("Cache-Control", "no-cache")
-			context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
-			return
-		}
+		servePreviewByKey(context, db, key)
+	})
 
-		cover := path.Join(env.PreviewFolder, preview.Cover)
-
-		stat, err := os.Stat(cover)
-		if err != nil {
-			context.Header("Cache-Control", "no-cache")
-			context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
-			return
-		} else if stat.IsDir() {
-			context.Header("Cache-Control", "no-cache")
-			context.Data(http.StatusMethodNotAllowed, assets.MIMEType, assets.IVNoPreview)
-			return
-		}
-
-		context.File(cover)
+	group.GET("/by-key/*key", func(context *gin.Context) {
+		key := context.Param("key")
+		servePreviewByKey(context, db, model.FileKey(key))
 	})
 
 	group.GET("/no-preview", func(context *gin.Context) {

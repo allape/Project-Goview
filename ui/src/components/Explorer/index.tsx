@@ -5,8 +5,11 @@ import { ReloadOutlined } from "@ant-design/icons";
 import { Button, Empty, Input, Spin } from "antd";
 import cls from "classnames";
 import { ReactElement, useCallback, useEffect, useState } from "react";
-import { readDir } from "../../api/datasource.ts";
-import { generatePreview } from "../../api/preview.ts";
+import { getFileURLFromDatasource, readDir } from "../../api/datasource.ts";
+import {
+  generatePreview,
+  getPreviewURLByDatasource,
+} from "../../api/preview.ts";
 import IDatasource, { IFileInfo } from "../../model/datasource.ts";
 import styles from "./style.module.scss";
 
@@ -91,7 +94,10 @@ export default function Explorer({
         setFiles(
           files.map((file) => ({
             ...file,
-            url: `${SERVER_URL}/preview/${value}${cwd}/${encodeURIComponent(file.name)}`,
+            url: getPreviewURLByDatasource(
+              value,
+              `${cwd}/${encodeURIComponent(file.name)}`,
+            ),
           })),
         );
       }).then();
@@ -129,7 +135,10 @@ export default function Explorer({
         location.hash = `${cwdRef.current}/${encodeURIComponent(file.name)}`;
       } else {
         window.open(
-          `${SERVER_URL}/datasource/fetch/${value}${cwdRef.current}/${encodeURIComponent(file.name)}`,
+          getFileURLFromDatasource(
+            value!,
+            `${cwdRef.current}/${encodeURIComponent(file.name)}`,
+          ),
         );
       }
     },

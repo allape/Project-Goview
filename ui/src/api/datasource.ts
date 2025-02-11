@@ -14,3 +14,7 @@ export function readDir(
     `${SERVER_URL}/datasource/readdir/${id}${wd}`,
   );
 }
+
+export function getFileURLFromDatasource(id: IDatasource['id'], filename: string): string {
+  return `${SERVER_URL}/datasource/fetch/${id}${filename}`;
+}
