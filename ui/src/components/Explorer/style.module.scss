@@ -1,5 +1,6 @@
 .wrapper {
   padding-top: 10px;
+
   .files {
     display: flex;
     justify-content: space-evenly;
@@ -38,10 +39,12 @@
       }
 
       .name {
-        white-space: pre-wrap;
         padding: 10px;
         font-size: 14px;
         border-top: 1px solid darkgrey;
+        word-break: break-all;
+        white-space: break-spaces;
+
         &.center {
           text-align: center;
           font-weight: bold;

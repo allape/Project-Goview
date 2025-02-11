@@ -59,7 +59,9 @@ function File({ dummy, file, onClick }: IFileProps): ReactElement {
       <div className={styles.preview}>
         <img src={file.isDir ? NO_PREVIEW : file.url} alt={file.name} />
       </div>
-      <div className={styles.name}>{file.name}</div>
+      <div className={styles.name}>
+        {file.isDir ? `📁` : "📃"} {file.name}
+      </div>
     </div>
   );
 }
@@ -198,7 +200,7 @@ export default function Explorer({
     <Spin spinning={loading}>
       <div className={styles.wrapper}>
         <Flex justifyContent="stretch">
-          <Input value={cwd} readOnly placeholder="CWD" />
+          <Input value={decodeURIComponent(cwd)} readOnly placeholder="CWD" />
           <Button onClick={handleReload}>
             <ReloadOutlined />
           </Button>
