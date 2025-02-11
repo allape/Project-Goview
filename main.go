@@ -44,7 +44,7 @@ func main() {
 		engine.Use(cors.Default())
 	}
 
-	err = controller.SetupUIController(engine, env.UIIndexHTML)
+	err = controller.SetupUIController(engine, env.UIFolder)
 	if err != nil {
 		l.Error().Fatalf("Failed to setup ui controller: %v", err)
 	}

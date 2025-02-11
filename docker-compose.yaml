@@ -10,7 +10,7 @@ services:
       - ./certs:/app/certs
       - ./preview:/preview
     environment:
-      GOVIEW_UI_INDEX_HTML: /app/ui/index.html
+      GOVIEW_UI_FOLDER: /app/ui/
       GOVIEW_TRUSTED_CERTS: /app/certs/root.crt
       GOVIEW_PREVIEW_FOLDER: /preview
       GOVIEW_DATABASE_DSN: "root:Root_123456@(database:3306)/goview?charset=utf8mb4&parseTime=true"
