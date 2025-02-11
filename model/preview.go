@@ -111,38 +111,43 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 		return nil, err
 	}
 
-	switch fileType.MIME.Type {
-	case "image":
-		ext := strings.ToLower(path.Ext(tmpFile.Name()))
-		switch ext {
-		case ".gif":
-			_, err = util.FFMpegVideoSampleImage(tmpFile.Name(), fullDstFilePath, 0.5, image.Point{X: 2, Y: 2})
-			if err != nil {
-				return nil, err
+	coverStat, err := os.Stat(fullDstFilePath)
+	if err == nil && coverStat.Size() > 0 {
+		prev.Cover = dstFile
+	} else {
+		switch fileType.MIME.Type {
+		case "image":
+			ext := strings.ToLower(path.Ext(tmpFile.Name()))
+			switch ext {
+			case ".gif":
+				_, err = util.FFMpegVideoSampleImage(tmpFile.Name(), fullDstFilePath, 0.5, image.Point{X: 2, Y: 2})
+				if err != nil {
+					return nil, err
+				}
+			case ".raw":
+				fallthrough
+			case ".arw":
+				err = util.ExifToolPreview(fullDstFilePath, tmpFile.Name())
+				if err != nil {
+					return nil, err
+				}
+			default:
+				_, err = util.FFMpegScaleImage(fullDstFilePath, tmpFile.Name(), 0.1)
+				if err != nil {
+					return nil, err
+				}
 			}
-		case ".raw":
-			fallthrough
-		case ".arw":
-			err = util.ExifToolPreview(fullDstFilePath, tmpFile.Name())
+		case "video":
+			_, err = util.FFMpegVideoSampleImage(tmpFile.Name(), fullDstFilePath, 0.25, image.Point{X: 10, Y: 10})
 			if err != nil {
 				return nil, err
 			}
 		default:
-			_, err = util.FFMpegScaleImage(fullDstFilePath, tmpFile.Name(), 0.1)
-			if err != nil {
-				return nil, err
-			}
+			return nil, fmt.Errorf("filetype %s is not supported", fileType.MIME.Type)
 		}
-	case "video":
-		_, err = util.FFMpegVideoSampleImage(tmpFile.Name(), fullDstFilePath, 0.25, image.Point{X: 10, Y: 10})
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("filetype %s is not supported", fileType.MIME.Type)
-	}
 
-	prev.Cover = dstFile
+		prev.Cover = dstFile
+	}
 
 	return &prev, nil
 }
