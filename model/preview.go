@@ -64,6 +64,7 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 	}
 	defer func() {
 		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
 	}()
 
 	n, err := file.WriteTo(tmpFile)
