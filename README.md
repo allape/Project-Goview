@@ -4,4 +4,4 @@ A preview generation system for NAS.
 
 # Credits
 
-favicon: https://www.irasutoya.com/2013/03/blog-post_385.html
+- [favicon.png](ui/public/favicon.png): https://www.irasutoya.com/2019/12/blog-post_83.html
