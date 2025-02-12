@@ -57,7 +57,6 @@ export default function Explorer({
 
   const reload = useCallback(
     (value: IDatasource["id"] | undefined, cwd: string) => {
-      setFiles([]);
       if (!value) {
         return;
       }
@@ -110,6 +109,7 @@ export default function Explorer({
 
       if (file.isDir) {
         // setCwd((cwd) => `${cwd}/${encodeURIComponent(file.name)}`);
+        setFiles([]);
         location.hash = `${cwdRef.current}/${encodeURIComponent(file.name)}`;
       } else {
         window.open(
@@ -120,7 +120,7 @@ export default function Explorer({
         );
       }
     },
-    [cwdRef, value],
+    [cwdRef, setFiles, value],
   );
 
   const handleGenerate = useCallback(
@@ -177,12 +177,13 @@ export default function Explorer({
       e.preventDefault();
       const url = new URL(e.newURL);
       setCwd(url.hash.slice(1));
+      setFiles([]);
     };
     window.addEventListener("hashchange", handleHashChange);
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
     };
-  }, [setCwd]);
+  }, [setCwd, setFiles]);
 
   useEffect(() => {
     const handleResize = () => {
