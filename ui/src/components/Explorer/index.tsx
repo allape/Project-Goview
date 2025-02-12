@@ -6,7 +6,7 @@ import {
   FullscreenOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import { App, Button, Empty, Input, Spin } from "antd";
+import { App, Button, Empty, Input, Spin, Tooltip } from "antd";
 import { partial } from "filesize";
 import { ReactElement, useCallback, useEffect, useState } from "react";
 import { getFileURLFromDatasource, readDir } from "../../api/datasource.ts";
@@ -231,15 +231,21 @@ export default function Explorer({
             >
               {!file.isDir ? (
                 <>
-                  <Button type="link" onClick={() => handleGenerate(file)}>
-                    <FullscreenExitOutlined />
-                  </Button>
-                  <Button type="link" onClick={() => handleClick(file)}>
-                    <FullscreenOutlined />
-                  </Button>
-                  <Button type="link" onClick={() => window.open(file.url)}>
-                    <ExportOutlined />
-                  </Button>
+                  <Tooltip title={"(Re)Generate Preview"}>
+                    <Button type="link" onClick={() => handleGenerate(file)}>
+                      <FullscreenExitOutlined />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip title="Open original file in new tab">
+                    <Button type="link" onClick={() => handleClick(file)}>
+                      <FullscreenOutlined />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip title="Open preview in new tab">
+                    <Button type="link" onClick={() => window.open(file.url)}>
+                      <ExportOutlined />
+                    </Button>
+                  </Tooltip>
                 </>
               ) : (
                 <></>
