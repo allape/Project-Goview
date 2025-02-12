@@ -154,11 +154,17 @@ export default function Explorer({
             `[${i + 1}/${files.length}]: ${file.name}`,
             0,
           );
-          await generatePreview(
-            value,
-            `${cwdRef.current}/${encodeURIComponent(file.name)}`,
-          );
-          close();
+          try {
+            await generatePreview(
+              value,
+              `${cwdRef.current}/${encodeURIComponent(file.name)}`,
+            );
+          } catch (e) {
+            console.error(`Failed to generate preview for ${file.name}`, e);
+            break;
+          } finally {
+            close();
+          }
         }
         reload(value, cwdRef.current);
       });
