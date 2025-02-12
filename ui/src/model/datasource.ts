@@ -14,6 +14,7 @@ export interface IFileInfo {
   isDir: boolean;
   size: number;
   mtime: number;
+  hasPreview: boolean;
 }
 
 export const DatasourceTypes: ILV<DatasourceType>[] = [

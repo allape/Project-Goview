@@ -7,15 +7,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
+	"path"
 	"strconv"
 	"time"
 )
 
 type FileInfo struct {
-	Name  string    `json:"name"`
-	IsDir bool      `json:"isDir"`
-	Size  int64     `json:"size"`
-	MTime time.Time `json:"mtime"`
+	Name       string    `json:"name"`
+	IsDir      bool      `json:"isDir"`
+	Size       int64     `json:"size"`
+	MTime      time.Time `json:"mtime"`
+	HasPreview bool      `json:"hasPreview"`
 }
 
 func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
@@ -63,11 +65,21 @@ func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
 				gocrud.MakeErrorResponse(context, gocrud.RestCoder.InternalServerError(), err)
 				return
 			}
+
+			hasPreview := false
+
+			key := model.BuildPreviewKey(datasource, path.Join(wd, info.Name()))
+			var preview model.Preview
+			if err := db.First(&preview, "`key` = ?", key).Error; err == nil {
+				hasPreview = true
+			}
+
 			files[i] = FileInfo{
-				Name:  info.Name(),
-				IsDir: info.IsDir(),
-				Size:  info.Size(),
-				MTime: info.ModTime(),
+				Name:       info.Name(),
+				IsDir:      info.IsDir(),
+				Size:       info.Size(),
+				MTime:      info.ModTime(),
+				HasPreview: hasPreview,
 			}
 		}
 

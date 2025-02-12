@@ -64,10 +64,10 @@ export default function Explorer({
         setFiles(
           files.map((file) => ({
             ...file,
-            url: getPreviewURLByDatasource(
+            url: file.hasPreview ? getPreviewURLByDatasource(
               value,
               `${cwd}/${encodeURIComponent(file.name)}`,
-            ),
+            ) : "",
           })),
         );
       }).then();

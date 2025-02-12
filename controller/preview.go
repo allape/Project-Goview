@@ -13,11 +13,30 @@ import (
 	"strings"
 )
 
+const (
+	URI404       = "/api/preview/404"
+	URI500       = "/api/preview/500"
+	URINoPreview = "/api/preview/no-preview"
+)
+
+func redir(context *gin.Context, code int) {
+	image := URINoPreview
+
+	switch code {
+	case 404:
+		image = URI404
+	case 500:
+		image = URI500
+	}
+
+	context.Header("Cache-Control", "no-cache")
+	context.Redirect(http.StatusFound, image)
+}
+
 func servePreviewByKey(context *gin.Context, db *gorm.DB, key model.FileKey) {
 	key = model.FileKey(strings.TrimSpace(string(key)))
 	if key == "" {
-		context.Header("Cache-Control", "no-cache")
-		context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
+		redir(context, http.StatusNotFound)
 		return
 	}
 
@@ -25,8 +44,7 @@ func servePreviewByKey(context *gin.Context, db *gorm.DB, key model.FileKey) {
 
 	var preview model.Preview
 	if err := db.Model(&preview).First(&preview, "`key` = ?", key).Error; err != nil {
-		context.Header("Cache-Control", "no-cache")
-		context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
+		redir(context, http.StatusNotFound)
 		return
 	}
 
@@ -34,12 +52,10 @@ func servePreviewByKey(context *gin.Context, db *gorm.DB, key model.FileKey) {
 
 	stat, err := os.Stat(cover)
 	if err != nil {
-		context.Header("Cache-Control", "no-cache")
-		context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
+		redir(context, http.StatusNotFound)
 		return
 	} else if stat.IsDir() {
-		context.Header("Cache-Control", "no-cache")
-		context.Data(http.StatusMethodNotAllowed, assets.MIMEType, assets.IVNoPreview)
+		redir(context, 0)
 		return
 	}
 
@@ -124,6 +140,14 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 	group.GET("/by-key/*key", func(context *gin.Context) {
 		key := context.Param("key")
 		servePreviewByKey(context, db, model.FileKey(key))
+	})
+
+	group.GET("/404", func(context *gin.Context) {
+		context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
+	})
+
+	group.GET("/500", func(context *gin.Context) {
+		context.Data(http.StatusInternalServerError, assets.MIMEType, assets.IV500)
 	})
 
 	group.GET("/no-preview", func(context *gin.Context) {

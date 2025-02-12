@@ -3,18 +3,17 @@
   flex-direction: column;
   align-items: stretch;
   border: 1px solid darkgrey;
-  width: 300px;
-  min-height: 450px;
   position: relative;
+  width: 300px;
 
   &.hidden {
     visibility: hidden;
   }
 
   .cover {
-    width: 100%;
     font-size: 0;
     user-select: none;
+    height: 450px;
 
     &.clickable {
       cursor: pointer;
