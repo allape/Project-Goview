@@ -3,6 +3,7 @@ import { useLoading, useProxy } from "@allape/use-loading";
 import {
   ExportOutlined,
   FullscreenExitOutlined,
+  FullscreenOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
 import { App, Button, Empty, Input, Spin } from "antd";
@@ -227,6 +228,9 @@ export default function Explorer({
                     <FullscreenExitOutlined />
                   </Button>
                   <Button type="link" onClick={() => handleClick(file)}>
+                    <FullscreenOutlined />
+                  </Button>
+                  <Button type="link" onClick={() => window.open(file.url)}>
                     <ExportOutlined />
                   </Button>
                 </>
