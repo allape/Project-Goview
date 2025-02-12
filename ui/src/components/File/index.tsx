@@ -1,10 +1,11 @@
 import cls from "classnames";
-import { PropsWithChildren, ReactElement } from "react";
+import { PropsWithChildren, ReactElement, ReactNode } from "react";
 import { NO_PREVIEW } from "../../config";
 import styles from "./style.module.scss";
 
 export interface IFileProps {
-  name: string;
+  name: ReactNode;
+  alt?: string;
   hidden?: boolean;
   center?: boolean;
   cover?: string;
@@ -15,6 +16,7 @@ export interface IFileProps {
 export default function File({
   children,
   name,
+  alt,
   hidden,
   center,
   cover,
@@ -27,7 +29,7 @@ export default function File({
         className={cls(styles.cover, onClick && styles.clickable)}
         onClick={onClick}
       >
-        <img src={cover || NO_PREVIEW} alt={name} />
+        <img src={cover || NO_PREVIEW} alt={alt} />
       </div>
       <div className={cls(styles.name, center && styles.center)}>{name}</div>
       {children && <div className={styles.actions}>{children}</div>}

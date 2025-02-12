@@ -5,16 +5,20 @@ import {
   FullscreenExitOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import { Button, Empty, Input, Spin } from "antd";
+import { App, Button, Empty, Input, Spin } from "antd";
+import { partial } from "filesize";
 import { ReactElement, useCallback, useEffect, useState } from "react";
 import { getFileURLFromDatasource, readDir } from "../../api/datasource.ts";
 import {
   generatePreview,
   getPreviewURLByDatasource,
 } from "../../api/preview.ts";
+import { IV_404 } from "../../config";
 import IDatasource, { IFileInfo } from "../../model/datasource.ts";
 import File from "../File";
 import styles from "./style.module.scss";
+
+const filesize = partial({ standard: "jedec" });
 
 const PreviewableSuffix: string[] = [
   "jpg",
@@ -41,6 +45,7 @@ export interface IExplorerProps {
 export default function Explorer({
   value: valueFromProps,
 }: IExplorerProps): ReactElement {
+  const { message } = App.useApp();
   const { loading, execute } = useLoading();
 
   const [value, setValue] = useState<IExplorerProps["value"] | undefined>();
@@ -64,10 +69,12 @@ export default function Explorer({
         setFiles(
           files.map((file) => ({
             ...file,
-            url: file.hasPreview ? getPreviewURLByDatasource(
-              value,
-              `${cwd}/${encodeURIComponent(file.name)}`,
-            ) : "",
+            url: file.hasPreview
+              ? getPreviewURLByDatasource(
+                  value,
+                  `${cwd}/${encodeURIComponent(file.name)}`,
+                )
+              : "",
           })),
         );
       }).then();
@@ -128,7 +135,8 @@ export default function Explorer({
           files = [file];
         }
 
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
           if (file.isDir) {
             continue;
           }
@@ -141,15 +149,20 @@ export default function Explorer({
             continue;
           }
 
+          const close = message.loading(
+            `[${i + 1}/${files.length}]: ${file.name}`,
+            0,
+          );
           await generatePreview(
             value,
             `${cwdRef.current}/${encodeURIComponent(file.name)}`,
           );
+          close();
         }
         reload(value, cwdRef.current);
       });
     },
-    [cwdRef, execute, filesRef, reload, value],
+    [cwdRef, execute, filesRef, message, reload, value],
   );
 
   useEffect(() => {
@@ -192,8 +205,20 @@ export default function Explorer({
           {files.map((file) => (
             <File
               key={file.name}
-              name={`${file.isDir ? `📁` : "📃"} ${file.name}`}
-              cover={file.isDir ? undefined : file.url}
+              name={
+                <div>
+                  <div>
+                    {file.isDir ? `📁` : `📃`}
+                    {" - "}
+                    {file.isDir ? "" : `${filesize(file.size)} - `}
+                    {new Date(file.mtime).toLocaleString()}
+                  </div>
+                  <hr />
+                  <div>{file.name}</div>
+                </div>
+              }
+              alt={file.name}
+              cover={file.isDir ? undefined : file.url || IV_404}
               onClick={file.isDir ? () => handleClick(file) : undefined}
             >
               {!file.isDir ? (
