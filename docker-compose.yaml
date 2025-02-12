@@ -3,9 +3,11 @@ services:
   app:
     image: allape/goview:latest
     restart: unless-stopped
+    ports:
+      - "8080:8080"
     networks:
+      - external
       - internal
-      - caddy
     volumes:
       - ./certs:/app/certs
       - ./preview:/preview
@@ -30,8 +32,6 @@ services:
     volumes:
       - ./database:/var/lib/mysql
 networks:
-  caddy:
-    external: true
-    name: caddy
+  external:
   internal:
     internal: true

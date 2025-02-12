@@ -1,9 +1,11 @@
 import { Flex } from "@allape/gocrud-react";
-import { SERVER_URL } from "@allape/gocrud-react/src/config";
 import { useLoading, useProxy } from "@allape/use-loading";
-import { ReloadOutlined } from "@ant-design/icons";
+import {
+  ExportOutlined,
+  FullscreenExitOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { Button, Empty, Input, Spin } from "antd";
-import cls from "classnames";
 import { ReactElement, useCallback, useEffect, useState } from "react";
 import { getFileURLFromDatasource, readDir } from "../../api/datasource.ts";
 import {
@@ -11,6 +13,7 @@ import {
   getPreviewURLByDatasource,
 } from "../../api/preview.ts";
 import IDatasource, { IFileInfo } from "../../model/datasource.ts";
+import File from "../File";
 import styles from "./style.module.scss";
 
 const PreviewableSuffix: string[] = [
@@ -29,41 +32,6 @@ const PreviewableSuffix: string[] = [
 
 export interface IModifiedFileInfo extends IFileInfo {
   url: string;
-}
-
-interface IFileProps {
-  dummy?: boolean;
-  file: IModifiedFileInfo | string;
-  onClick?: (file: IModifiedFileInfo | string) => void;
-}
-
-const NO_PREVIEW = `${SERVER_URL}/preview/no-preview`;
-
-function File({ dummy, file, onClick }: IFileProps): ReactElement {
-  if (typeof file === "string") {
-    return (
-      <div
-        className={cls(styles.file, dummy && styles.dummy)}
-        onClick={() => onClick?.(file)}
-      >
-        <div className={styles.preview}>
-          <img src={NO_PREVIEW} alt={file} />
-        </div>
-        <div className={cls(styles.name, styles.center)}>{file}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.file} onClick={() => onClick?.(file)}>
-      <div className={styles.preview}>
-        <img src={file.isDir ? NO_PREVIEW : file.url} alt={file.name} />
-      </div>
-      <div className={styles.name}>
-        {file.isDir ? `📁` : "📃"} {file.name}
-      </div>
-    </div>
-  );
 }
 
 export interface IExplorerProps {
@@ -147,29 +115,42 @@ export default function Explorer({
     [cwdRef, value],
   );
 
-  const handleGenerate = useCallback(async () => {
-    if (!value) {
-      return;
-    }
-    await execute(async () => {
-      for (const file of filesRef.current) {
-        if (file.isDir) {
-          continue;
-        }
-
-        const ext = file.name.split(".").pop();
-        if (!ext || !PreviewableSuffix.includes(ext.toLowerCase())) {
-          continue;
-        }
-
-        await generatePreview(
-          value,
-          `${cwdRef.current}/${encodeURIComponent(file.name)}`,
-        );
+  const handleGenerate = useCallback(
+    async (file?: IModifiedFileInfo) => {
+      if (!value) {
+        return;
       }
-      reload(value, cwdRef.current);
-    });
-  }, [cwdRef, execute, filesRef, reload, value]);
+      await execute(async () => {
+        const noFilter = !!file;
+
+        let files = filesRef.current;
+        if (file) {
+          files = [file];
+        }
+
+        for (const file of files) {
+          if (file.isDir) {
+            continue;
+          }
+
+          const ext = file.name.split(".").pop();
+          if (
+            !noFilter &&
+            (!ext || !PreviewableSuffix.includes(ext.toLowerCase()))
+          ) {
+            continue;
+          }
+
+          await generatePreview(
+            value,
+            `${cwdRef.current}/${encodeURIComponent(file.name)}`,
+          );
+        }
+        reload(value, cwdRef.current);
+      });
+    },
+    [cwdRef, execute, filesRef, reload, value],
+  );
 
   useEffect(() => {
     const handleHashChange = (e: HashChangeEvent) => {
@@ -204,18 +185,36 @@ export default function Explorer({
           <Button onClick={handleReload}>
             <ReloadOutlined />
           </Button>
-          <Button onClick={handleGenerate}>Generate Preview</Button>
+          <Button onClick={() => handleGenerate()}>Generate Preview</Button>
         </Flex>
         <div className={styles.files}>
-          {cwd && <File file=".." onClick={handleClick} />}
+          {cwd && <File name=".." center onClick={() => handleClick("..")} />}
           {files.map((file) => (
-            <File key={file.name} file={file} onClick={handleClick} />
+            <File
+              key={file.name}
+              name={`${file.isDir ? `📁` : "📃"} ${file.name}`}
+              cover={file.isDir ? undefined : file.url}
+              onClick={file.isDir ? () => handleClick(file) : undefined}
+            >
+              {!file.isDir ? (
+                <>
+                  <Button type="link" onClick={() => handleGenerate(file)}>
+                    <FullscreenExitOutlined />
+                  </Button>
+                  <Button type="link" onClick={() => handleClick(file)}>
+                    <ExportOutlined />
+                  </Button>
+                </>
+              ) : (
+                <></>
+              )}
+            </File>
           ))}
           {files.length === 0 && !cwd ? (
             <Empty className={styles.emtpy} />
           ) : undefined}
           {dummyFiles.map((file) => (
-            <File key={file} dummy file={file} />
+            <File key={file} hidden name={file} />
           ))}
         </div>
       </div>

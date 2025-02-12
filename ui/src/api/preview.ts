@@ -18,7 +18,7 @@ export function getPreviewURLByDatasource(
   id: IDatasource["id"],
   filename: string,
 ): string {
-  return `${SERVER_URL}/preview/by-ds/${id}/${filename}`;
+  return `${SERVER_URL}/preview/by-ds/${id}${filename}`;
 }
 
 export function getPreviewURLByKey(key: IPreview["key"]): string {

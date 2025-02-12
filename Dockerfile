@@ -19,6 +19,8 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 RUN /usr/local/go/bin/go mod download
 
+RUN apk update && apk add build-base
+
 COPY . .
 RUN /usr/local/go/bin/go build -o app
 
@@ -28,7 +30,7 @@ WORKDIR /app
 
 RUN apk update && apk add ffmpeg exiftool
 
-COPY --from=ui_builder /build/dist ui
+COPY --from=ui_builder /build/dist ui/dist
 COPY --from=builder /build/app app
 
 EXPOSE 8080
