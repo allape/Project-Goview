@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/allape/gocrud"
+	"github.com/allape/gogger"
 	"github.com/allape/goview/util"
 	"github.com/h2non/filetype"
 	"image"
@@ -13,6 +14,8 @@ import (
 	"sync"
 	"time"
 )
+
+var l = gogger.New("model")
 
 type FileKey string
 
@@ -75,8 +78,11 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 		return nil, err
 	}
 
+	l.Info().Printf("digest of %s = %s", srcFile, digest)
+
 	found, err := finder(digest)
 	if err == nil {
+		l.Info().Printf("found preview %s", found.Key)
 		found.ID = 0
 		found.CreatedAt = time.Now()
 		found.UpdatedAt = time.Now()
@@ -85,6 +91,8 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 		found.Key = key
 		return found, nil
 	}
+
+	l.Info().Printf("generating preview for %s", key)
 
 	fileType, err := filetype.MatchFile(tmpFile.Name())
 	if err != nil {
@@ -113,8 +121,10 @@ func GeneratePreview(datasource Datasource, srcFile, dstFolder string, finder fu
 
 	coverStat, err := os.Stat(fullDstFilePath)
 	if err == nil && coverStat.Size() > 0 {
+		l.Info().Printf("cover %s already exists", fullDstFilePath)
 		prev.Cover = dstFile
 	} else {
+		l.Info().Printf("generating cover %s", fullDstFilePath)
 		switch fileType.MIME.Type {
 		case "image":
 			ext := strings.ToLower(path.Ext(tmpFile.Name()))

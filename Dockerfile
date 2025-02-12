@@ -19,8 +19,6 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 RUN /usr/local/go/bin/go mod download
 
-RUN apk update && apk add build-base
-
 COPY . .
 RUN /usr/local/go/bin/go build -o app
 
