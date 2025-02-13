@@ -91,6 +91,8 @@ func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
 			}(i, entry)
 		}
 
+		waitGroup.Wait()
+
 		context.JSON(http.StatusOK, gocrud.R[[]FileInfo]{
 			Code: gocrud.RestCoder.OK(),
 			Data: files,
