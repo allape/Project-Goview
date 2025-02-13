@@ -12,3 +12,6 @@ var IV500 []byte
 
 //go:embed i_v_no_preview.jpg
 var IVNoPreview []byte
+
+//go:embed favicon.png
+var Favicon []byte

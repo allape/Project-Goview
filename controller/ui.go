@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/allape/goview/assets"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -17,7 +18,7 @@ func SetupUIController(engine *gin.Engine, folder string) error {
 		context.Redirect(http.StatusMovedPermanently, URIUI)
 	})
 	engine.GET("/favicon.ico", func(context *gin.Context) {
-		context.Redirect(http.StatusMovedPermanently, "/ui/favicon.png")
+		context.Data(http.StatusOK, assets.MIMEType, assets.Favicon)
 	})
 
 	return nil
