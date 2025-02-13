@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 )
 
 const (
@@ -79,7 +80,12 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 		return err
 	}
 
+	locker := sync.Mutex{}
+
 	group.PUT("/from-ds/:datasource/*filename", func(context *gin.Context) {
+		locker.Lock()
+		defer locker.Unlock()
+
 		datasourceId := context.Param("datasource")
 		filename := context.Param("filename")
 

@@ -6,9 +6,11 @@ import (
 	"github.com/allape/goview/model"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"io/fs"
 	"net/http"
 	"path"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -58,29 +60,35 @@ func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
 			return
 		}
 
+		var waitGroup sync.WaitGroup
+
 		files := make([]FileInfo, len(entries))
 		for i, entry := range entries {
-			info, err := entry.Info()
-			if err != nil {
-				gocrud.MakeErrorResponse(context, gocrud.RestCoder.InternalServerError(), err)
-				return
-			}
+			waitGroup.Add(1)
+			go func(i int, entry fs.DirEntry) {
+				defer waitGroup.Done()
 
-			hasPreview := false
+				info, err := entry.Info()
+				if err != nil {
+					return
+				}
 
-			key := model.BuildPreviewKey(datasource, path.Join(wd, info.Name()))
-			var preview model.Preview
-			if err := db.First(&preview, "`key` = ?", key).Error; err == nil {
-				hasPreview = true
-			}
+				hasPreview := false
 
-			files[i] = FileInfo{
-				Name:       info.Name(),
-				IsDir:      info.IsDir(),
-				Size:       info.Size(),
-				MTime:      info.ModTime(),
-				HasPreview: hasPreview,
-			}
+				key := model.BuildPreviewKey(datasource, path.Join(wd, info.Name()))
+				var preview model.Preview
+				if err := db.First(&preview, "`key` = ?", key).Error; err == nil {
+					hasPreview = true
+				}
+
+				files[i] = FileInfo{
+					Name:       info.Name(),
+					IsDir:      info.IsDir(),
+					Size:       info.Size(),
+					MTime:      info.ModTime(),
+					HasPreview: hasPreview,
+				}
+			}(i, entry)
 		}
 
 		context.JSON(http.StatusOK, gocrud.R[[]FileInfo]{
