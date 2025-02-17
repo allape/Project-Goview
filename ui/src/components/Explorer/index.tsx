@@ -62,21 +62,29 @@ export default function Explorer({
       }
 
       execute(async () => {
-        const files = await readDir(value, cwd || "/");
-        files.sort((a, b) =>
-          a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1,
-        );
-        setFiles(
-          files.map((file) => ({
-            ...file,
-            url: file.hasPreview
-              ? getPreviewURLByDatasource(
-                  value,
-                  `${cwd}/${encodeURIComponent(file.name)}`,
-                )
-              : "",
-          })),
-        );
+        try {
+          const files = await readDir(value, cwd || "/");
+          files.sort((a, b) =>
+            a.isDir === b.isDir
+              ? a.name.localeCompare(b.name)
+              : a.isDir
+                ? -1
+                : 1,
+          );
+          setFiles(
+            files.map((file) => ({
+              ...file,
+              url: file.hasPreview
+                ? getPreviewURLByDatasource(
+                    value,
+                    `${cwd}/${encodeURIComponent(file.name)}`,
+                  )
+                : "",
+            })),
+          );
+        } catch {
+          setFiles([]);
+        }
       }).then();
     },
     [execute, setFiles],
@@ -93,7 +101,10 @@ export default function Explorer({
   useEffect(() => {
     setCwd("");
     setValue(valueFromProps);
-  }, [setCwd, valueFromProps]);
+    if (!valueFromProps) {
+      setFiles([]);
+    }
+  }, [setCwd, setFiles, valueFromProps]);
 
   const handleClick = useCallback(
     (file: IModifiedFileInfo | string) => {
@@ -242,7 +253,10 @@ export default function Explorer({
                     </Button>
                   </Tooltip>
                   <Tooltip title="Open preview in new tab">
-                    <Button type="link" onClick={() => window.open(file.url)}>
+                    <Button
+                      type="link"
+                      onClick={() => window.open(file.url || IV_404)}
+                    >
                       <ExportOutlined />
                     </Button>
                   </Tooltip>

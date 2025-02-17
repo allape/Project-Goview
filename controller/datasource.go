@@ -15,11 +15,13 @@ import (
 )
 
 type FileInfo struct {
-	Name       string    `json:"name"`
-	IsDir      bool      `json:"isDir"`
-	Size       int64     `json:"size"`
-	MTime      time.Time `json:"mtime"`
-	HasPreview bool      `json:"hasPreview"`
+	Name  string    `json:"name"`
+	IsDir bool      `json:"isDir"`
+	Size  int64     `json:"size"`
+	MTime time.Time `json:"mtime"`
+
+	Key        model.FileKey `json:"key"`
+	HasPreview bool          `json:"hasPreview"`
 }
 
 func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
@@ -62,6 +64,7 @@ func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
 
 		var waitGroup sync.WaitGroup
 
+		keys := make([]model.FileKey, len(entries))
 		files := make([]FileInfo, len(entries))
 		for i, entry := range entries {
 			waitGroup.Add(1)
@@ -73,22 +76,37 @@ func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
 					return
 				}
 
-				hasPreview := false
-
-				key := model.BuildPreviewKey(datasource, path.Join(wd, info.Name()))
-				var preview model.Preview
-				if err := db.First(&preview, "`key` = ?", key).Error; err == nil {
-					hasPreview = true
-				}
-
+				keys[i] = model.BuildPreviewKey(datasource, path.Join(wd, info.Name()))
 				files[i] = FileInfo{
 					Name:       info.Name(),
 					IsDir:      info.IsDir(),
 					Size:       info.Size(),
 					MTime:      info.ModTime(),
-					HasPreview: hasPreview,
+					HasPreview: false,
+					Key:        keys[i],
 				}
 			}(i, entry)
+		}
+
+		waitGroup.Wait()
+
+		var previews []model.Preview
+		if err := db.Find(&previews, "`key` IN ?", keys).Error; err != nil {
+			gocrud.MakeErrorResponse(context, gocrud.RestCoder.InternalServerError(), err)
+			return
+		}
+
+		for index := range previews {
+			waitGroup.Add(1)
+			go func(preview *model.Preview) {
+				defer waitGroup.Done()
+				for i, file := range files {
+					if file.Key == preview.Key {
+						files[i].HasPreview = true
+						return
+					}
+				}
+			}(&previews[index])
 		}
 
 		waitGroup.Wait()
