@@ -12,15 +12,12 @@ import {
   MenuProps,
   Select,
   Space,
-  Tag,
 } from "antd";
 import { ReactElement, useMemo, useState } from "react";
 import { DatasourceCrudy } from "../../api/datasource.ts";
 import { getPreviewURLByKey, PreviewCrudy } from "../../api/preview.ts";
-import { TagCrudy } from "../../api/tag.ts";
 import IDatasource, { DatasourceTypes } from "../../model/datasource.ts";
 import IPreview, { IPreviewSearchParams } from "../../model/preview.ts";
-import ITag from "../../model/tag.ts";
 
 export interface IPrimaryDropdownProps {
   afterSaved?: () => void;
@@ -37,8 +34,6 @@ export default function PrimaryDropdown({
     [],
   );
 
-  const tagCrudyEmitter = useMemo(() => NewCrudyButtonEventEmitter<ITag>(), []);
-
   const previewCrudyEmitter = useMemo(
     () => NewCrudyButtonEventEmitter<IPreview>(),
     [],
@@ -52,17 +47,12 @@ export default function PrimaryDropdown({
         onClick: () => datasourceCrudyEmitter.dispatchEvent("open"),
       },
       {
-        key: "tag",
-        label: "Manage Tag",
-        onClick: () => tagCrudyEmitter.dispatchEvent("open"),
-      },
-      {
         key: "preview",
         label: "Manage Preview",
         onClick: () => previewCrudyEmitter.dispatchEvent("open"),
       },
     ],
-    [datasourceCrudyEmitter, previewCrudyEmitter, tagCrudyEmitter],
+    [datasourceCrudyEmitter, previewCrudyEmitter],
   );
 
   const datasourceColumns = useMemo<ICrudyButtonProps<IDatasource>["columns"]>(
@@ -98,31 +88,6 @@ export default function PrimaryDropdown({
           }
           return v;
         },
-      },
-    ],
-    [],
-  );
-
-  const tagColumns = useMemo<ICrudyButtonProps<ITag>["columns"]>(
-    () => [
-      {
-        dataIndex: "id",
-        title: "ID",
-      },
-      {
-        dataIndex: "key",
-        title: "Key",
-      },
-      {
-        dataIndex: "name",
-        title: "Name",
-        render: (v, record) => (
-          <Tag color={record.color}>
-            <span style={{ color: record.color, filter: "invert(1)" }}>
-              {v}
-            </span>
-          </Tag>
-        ),
       },
     ],
     [],
@@ -214,26 +179,6 @@ export default function PrimaryDropdown({
           </Form.Item>
           <Form.Item name="cwd" label="CWD" rules={[{ required: true }]}>
             <Input placeholder="CWD is required!" maxLength={3072} />
-          </Form.Item>
-        </CrudyButton>
-        <CrudyButton<ITag>
-          name="Tag"
-          crudy={TagCrudy}
-          columns={tagColumns}
-          pageable={false}
-          emitter={tagCrudyEmitter}
-          buttonProps={{
-            type: "primary",
-          }}
-        >
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-            <Input placeholder="Name is required!" maxLength={200} />
-          </Form.Item>
-          <Form.Item name="key" label="Key" rules={[{ required: true }]}>
-            <Input placeholder="Key is required!" maxLength={200} />
-          </Form.Item>
-          <Form.Item name="color" label="Color">
-            <Input type="color" />
           </Form.Item>
         </CrudyButton>
         <CrudyButton<IPreview>

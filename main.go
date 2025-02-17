@@ -33,7 +33,7 @@ func main() {
 		l.Error().Fatalln(err)
 	}
 
-	err = db.AutoMigrate(&model.Datasource{}, &model.Preview{}, &model.Tag{})
+	err = db.AutoMigrate(&model.Datasource{}, &model.Preview{})
 	if err != nil {
 		l.Error().Fatalf("Failed to auto migrate database: %v", err)
 	}
@@ -59,11 +59,6 @@ func main() {
 	err = controller.SetupPreviewController(apiGroup.Group("preview"), db)
 	if err != nil {
 		l.Error().Fatalf("Failed to setup preview controller: %v", err)
-	}
-
-	err = controller.SetupTagController(apiGroup.Group("tag"), db)
-	if err != nil {
-		l.Error().Fatalf("Failed to setup tag controller: %v", err)
 	}
 
 	go func() {
