@@ -8,8 +8,10 @@ import (
 	"gorm.io/gorm"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -117,66 +119,97 @@ func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
 		})
 	})
 
-	group.GET("/fetch/:datasource/*wd", func(context *gin.Context) {
+	group.GET("/by-ds/:datasource/*wd", func(context *gin.Context) {
 		datasourceId := context.Param("datasource")
 		wd := context.Param("wd")
 
-		var datasource model.Datasource
-		if err := db.First(&datasource, datasourceId).Error; err != nil {
-			context.Header("Cache-Control", "no-cache")
-			context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
-			return
-		}
-
-		dfs, err := model.GetFS(datasource)
+		id, err := strconv.Atoi(datasourceId)
 		if err != nil {
-			l.Error().Printf("Failed to get fs for datasource %d: %v", datasource.ID, err)
-			context.Header("Cache-Control", "no-cache")
-			context.Data(http.StatusInternalServerError, assets.MIMEType, assets.IV500)
+			gocrud.MakeErrorResponse(context, gocrud.RestCoder.BadRequest(), err)
 			return
 		}
 
-		file, err := dfs.Open(wd)
+		serveFile(context, db, gocrud.ID(id), wd)
+	})
+
+	group.GET("/by-key/*key", func(context *gin.Context) {
+		key := context.Param("key")
+
+		u, err := url.Parse(strings.TrimPrefix(key, "/"))
 		if err != nil {
-			l.Error().Printf("Failed to open file %s: %v", wd, err)
-			context.Header("Cache-Control", "no-cache")
-			context.Data(http.StatusInternalServerError, assets.MIMEType, assets.IV500)
+			gocrud.MakeErrorResponse(context, gocrud.RestCoder.BadRequest(), err)
 			return
 		}
 
-		stat, err := file.Stat()
+		dsId := u.Hostname()
+		wd := u.Path
+
+		id, err := strconv.Atoi(dsId)
 		if err != nil {
-			l.Error().Printf("Failed to stat file %s: %v", wd, err)
-			context.Header("Cache-Control", "no-cache")
-			context.Data(http.StatusInternalServerError, assets.MIMEType, assets.IV500)
-			return
-		} else if stat.IsDir() {
-			context.Header("Cache-Control", "no-cache")
-			context.Data(http.StatusMethodNotAllowed, assets.MIMEType, assets.IVNoPreview)
+			gocrud.MakeErrorResponse(context, gocrud.RestCoder.BadRequest(), err)
 			return
 		}
 
-		contentType := "stream/octet"
-
-		key := model.BuildPreviewKey(datasource, wd)
-		var preview model.Preview
-		if err := db.First(&preview, "`key` = ?", key).Error; err == nil {
-			contentType = preview.MIME
-		}
-
-		context.Header("Content-Type", contentType)
-		context.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
-		context.Header("Last-Modified", stat.ModTime().Format(http.TimeFormat))
-		context.Writer.WriteHeaderNow()
-		context.Writer.Flush()
-
-		_, err = file.WriteTo(context.Writer)
-		if err != nil {
-			l.Error().Printf("Failed to write file %s: %v", wd, err)
-			return
-		}
-		context.Writer.Flush()
+		serveFile(context, db, gocrud.ID(id), wd)
 	})
 
 	return nil
+}
+
+func serveFile(context *gin.Context, db *gorm.DB, datasourceId gocrud.ID, wd string) {
+	var datasource model.Datasource
+	if err := db.First(&datasource, datasourceId).Error; err != nil {
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusNotFound, assets.MIMEType, assets.IV404)
+		return
+	}
+
+	dfs, err := model.GetFS(datasource)
+	if err != nil {
+		l.Error().Printf("Failed to get fs for datasource %d: %v", datasource.ID, err)
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusInternalServerError, assets.MIMEType, assets.IV500)
+		return
+	}
+
+	file, err := dfs.Open(wd)
+	if err != nil {
+		l.Error().Printf("Failed to open file %s: %v", wd, err)
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusInternalServerError, assets.MIMEType, assets.IV500)
+		return
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		l.Error().Printf("Failed to stat file %s: %v", wd, err)
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusInternalServerError, assets.MIMEType, assets.IV500)
+		return
+	} else if stat.IsDir() {
+		context.Header("Cache-Control", "no-cache")
+		context.Data(http.StatusMethodNotAllowed, assets.MIMEType, assets.IVNoPreview)
+		return
+	}
+
+	contentType := "stream/octet"
+
+	key := model.BuildPreviewKey(datasource, wd)
+	var preview model.Preview
+	if err := db.First(&preview, "`key` = ?", key).Error; err == nil {
+		contentType = preview.MIME
+	}
+
+	context.Header("Content-Type", contentType)
+	context.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	context.Header("Last-Modified", stat.ModTime().Format(http.TimeFormat))
+	context.Writer.WriteHeaderNow()
+	context.Writer.Flush()
+
+	_, err = file.WriteTo(context.Writer)
+	if err != nil {
+		l.Error().Printf("Failed to write file %s: %v", wd, err)
+		return
+	}
+	context.Writer.Flush()
 }

@@ -2,6 +2,7 @@ import Crudy, { aapi } from "@allape/gocrud-react";
 import { SERVER_URL } from "@allape/gocrud-react/src/config";
 import IDatasource from "../model/datasource.ts";
 import IPreview from "../model/preview.ts";
+import { URLString } from "./common.ts";
 
 export const PreviewCrudy = new Crudy<IPreview>(`${SERVER_URL}/preview`);
 
@@ -16,11 +17,11 @@ export function generatePreview(
 
 export function getPreviewURLByDatasource(
   id: IDatasource["id"],
-  filename: string,
+  filename: URLString,
 ): string {
   return `${SERVER_URL}/preview/by-ds/${id}${filename}`;
 }
 
-export function getPreviewURLByKey(key: IPreview["key"]): string {
+export function getPreviewURLByKey(key: IPreview["key"]): URLString {
   return `${SERVER_URL}/preview/by-key/${encodeURIComponent(key)}`;
 }
