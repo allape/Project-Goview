@@ -66,12 +66,17 @@ func servePreviewByKey(context *gin.Context, db *gorm.DB, key model.FileKey) {
 func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 	err := gocrud.New(group, db, gocrud.CRUD[model.Preview]{
 		SearchHandlers: map[string]gocrud.SearchHandler{
-			"datasourceId": gocrud.KeywordEqual("datasource_id", nil),
-			"mime":         gocrud.KeywordLike("mime", nil),
-			"key":          gocrud.KeywordLike("key", nil),
-			"ffprobeInfo":  gocrud.KeywordLike("ff_probe_info", nil),
-			"digest":       gocrud.KeywordEqual("digest", nil),
-			"deleted":      gocrud.NewSoftDeleteSearchHandler(""),
+			"datasourceId":     gocrud.KeywordEqual("datasource_id", nil),
+			"mime":             gocrud.KeywordLike("mime", nil),
+			"key":              gocrud.KeywordLike("key", nil),
+			"ffprobeInfo":      gocrud.KeywordLike("ff_probe_info", nil),
+			"digest":           gocrud.KeywordEqual("digest", nil),
+			"deleted":          gocrud.NewSoftDeleteSearchHandler(""),
+			"sortBy_id":        gocrud.SortBy("id"),
+			"sortBy_createdAt": gocrud.SortBy("created_at"),
+			"sortBy_updatedAt": gocrud.SortBy("updated_at"),
+			"sortBy_deletedAt": gocrud.SortBy("deleted_at"),
+			"in_id":            gocrud.KeywordIn("id", nil),
 		},
 		OnDelete: gocrud.NewSoftDeleteHandler[model.Preview](gocrud.RestCoder),
 	})
