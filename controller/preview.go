@@ -77,6 +77,7 @@ func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
 			"sortBy_updatedAt": gocrud.SortBy("updated_at"),
 			"sortBy_deletedAt": gocrud.SortBy("deleted_at"),
 			"in_id":            gocrud.KeywordIn("id", nil),
+			"in_key":           gocrud.KeywordIn("key", nil),
 		},
 		OnDelete: gocrud.NewSoftDeleteHandler[model.Preview](gocrud.RestCoder),
 	})
