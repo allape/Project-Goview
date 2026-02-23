@@ -1,7 +1,6 @@
-import { CrudyButton, searchable } from "@allape/gocrud-react";
+import { CrudyButton, Ellipsis, searchable } from "@allape/gocrud-react";
 import { ICrudyButtonProps } from "@allape/gocrud-react/src/component/CrudyButton";
 import NewCrudyButtonEventEmitter from "@allape/gocrud-react/src/component/CrudyButton/eventemitter.ts";
-import { EllipsisCell } from "@allape/gocrud-react/src/helper/antd.tsx";
 import { DownOutlined } from "@ant-design/icons";
 import {
   Avatar,
@@ -126,22 +125,22 @@ export default function PrimaryDropdown({
           </div>
         ),
         filtered: !!previewSearchParams["key"],
-        ...searchable("key", "Key", (dataIndex, value) =>
+        ...searchable<IPreview>("Key", value =>
           setPreviewSearchParams((old) => ({
             ...old,
-            [dataIndex]: value,
+            key: value,
           })),
         ),
       },
       {
         dataIndex: "ffprobeInfo",
         title: "FFProbe Info",
-        render: EllipsisCell(),
+        render: (v) => <Ellipsis>{v}</Ellipsis>,
         filtered: !!previewSearchParams["ffprobeInfo"],
-        ...searchable("ffprobeInfo", "FFProbe Info", (dataIndex, value) =>
+        ...searchable("FFProbe Info", value =>
           setPreviewSearchParams((old) => ({
             ...old,
-            [dataIndex]: value,
+            ffprobeInfo: value,
           })),
         ),
       },

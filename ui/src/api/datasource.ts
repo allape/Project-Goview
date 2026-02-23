@@ -1,4 +1,4 @@
-import Crudy, { aapi } from "@allape/gocrud-react";
+import Crudy, { get } from "@allape/gocrud-react";
 import { SERVER_URL } from "@allape/gocrud-react/src/config";
 import IDatasource, { IFileInfo } from "../model/datasource.ts";
 import IPreview from "../model/preview.ts";
@@ -12,7 +12,7 @@ export function readDir(
   id: IDatasource["id"],
   wd: string,
 ): Promise<IFileInfo[]> {
-  return aapi.get(`${SERVER_URL}/datasource/readdir/${id}${wd}`);
+  return get(`${SERVER_URL}/datasource/readdir/${id}${wd}`);
 }
 
 export function getFileURLFromDatasource(

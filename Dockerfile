@@ -1,4 +1,4 @@
-FROM node:22 AS ui_builder
+FROM node:25 AS ui_builder
 
 WORKDIR /build
 
@@ -11,7 +11,7 @@ COPY ui .
 
 RUN npm run build
 
-FROM golang:1.23.5-alpine3.20 AS builder
+FROM golang:1.26.0-alpine3.23 AS builder
 
 WORKDIR /build
 
@@ -22,7 +22,7 @@ RUN /usr/local/go/bin/go mod download
 COPY . .
 RUN /usr/local/go/bin/go build -o app
 
-FROM alpine:3.20
+FROM alpine:3
 
 WORKDIR /app
 
