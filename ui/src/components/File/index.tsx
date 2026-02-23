@@ -29,7 +29,7 @@ export default function File({
         className={cls(styles.cover, onClick && styles.clickable)}
         onClick={onClick}
       >
-        <img src={cover || NO_PREVIEW} alt={alt} />
+        <img src={cover || NO_PREVIEW} alt={alt} loading="lazy" />
       </div>
       <div className={cls(styles.name, center && styles.center)}>{name}</div>
       {children && <div className={styles.actions}>{children}</div>}
