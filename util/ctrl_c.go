@@ -1,10 +1,11 @@
 package util
 
 import (
-	"github.com/allape/gogger"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/allape/gogger"
 )
 
 var l = gogger.New("ctrl-c")

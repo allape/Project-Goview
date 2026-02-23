@@ -3,16 +3,17 @@ package model
 import (
 	"errors"
 	"fmt"
-	"github.com/allape/gocrud"
-	"github.com/allape/gogger"
-	"github.com/allape/goview/util"
-	"github.com/h2non/filetype"
 	"image"
 	"os"
 	"path"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/allape/gocrud"
+	"github.com/allape/gogger"
+	"github.com/allape/goview/util"
+	"github.com/h2non/filetype"
 )
 
 var l = gogger.New("model")

@@ -1,9 +1,10 @@
 package controller
 
 import (
+	"net/http"
+
 	"github.com/allape/goview/assets"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 const (

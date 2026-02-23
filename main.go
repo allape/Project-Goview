@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/allape/gogger"
 	"github.com/allape/goview/controller"
 	"github.com/allape/goview/env"
@@ -11,7 +13,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"time"
 )
 
 var l = gogger.New("main")

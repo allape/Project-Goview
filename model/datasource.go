@@ -3,14 +3,15 @@ package model
 import (
 	"crypto/tls"
 	"errors"
-	"github.com/allape/gocrud"
-	"github.com/allape/gohtvfs"
-	"github.com/allape/goview/env"
 	"io"
 	"io/fs"
 	"net/http"
 	"os"
 	"path"
+
+	"github.com/allape/gocrud"
+	"github.com/allape/gohtvfs"
+	"github.com/allape/goview/env"
 )
 
 type LocalFS struct {

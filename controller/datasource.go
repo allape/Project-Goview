@@ -1,11 +1,6 @@
 package controller
 
 import (
-	"github.com/allape/gocrud"
-	"github.com/allape/goview/assets"
-	"github.com/allape/goview/model"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -14,6 +9,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/allape/gocrud"
+	"github.com/allape/goview/assets"
+	"github.com/allape/goview/model"
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type FileInfo struct {
@@ -27,7 +28,7 @@ type FileInfo struct {
 }
 
 func SetupDatasourceController(group *gin.RouterGroup, db *gorm.DB) error {
-	err := gocrud.New(group, db, gocrud.CRUD[model.Datasource]{
+	err := gocrud.New(group, db, gocrud.Crud[model.Datasource]{
 		EnableGetAll:  true,
 		DisableCount:  true,
 		DisablePage:   true,

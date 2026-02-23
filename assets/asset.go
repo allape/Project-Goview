@@ -2,11 +2,12 @@ package assets
 
 import (
 	_ "embed"
-	"github.com/fogleman/gg"
-	"github.com/golang/freetype/truetype"
 	"image/color"
 	"image/jpeg"
 	"os"
+
+	"github.com/fogleman/gg"
+	"github.com/golang/freetype/truetype"
 )
 
 //go:embed Roboto-Regular.ttf
@@ -46,6 +47,10 @@ func CreateImage(
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		_ = file.Close()
+	}()
 
 	img := dc.Image()
 	err = jpeg.Encode(file, img, &jpeg.Options{Quality: 80})

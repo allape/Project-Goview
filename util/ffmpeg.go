@@ -196,6 +196,10 @@ func ExifToolPreview(dst, src string) error {
 		return err
 	}
 
+	defer func() {
+		_ = file.Close()
+	}()
+
 	_, err = file.Write(bs)
 	if err != nil {
 		return err

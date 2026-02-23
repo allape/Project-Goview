@@ -1,17 +1,18 @@
 package controller
 
 import (
+	"net/http"
+	"os"
+	"path"
+	"strings"
+	"sync"
+
 	"github.com/allape/gocrud"
 	"github.com/allape/goview/assets"
 	"github.com/allape/goview/env"
 	"github.com/allape/goview/model"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"net/http"
-	"os"
-	"path"
-	"strings"
-	"sync"
 )
 
 const (
@@ -64,7 +65,7 @@ func servePreviewByKey(context *gin.Context, db *gorm.DB, key model.FileKey) {
 }
 
 func SetupPreviewController(group *gin.RouterGroup, db *gorm.DB) error {
-	err := gocrud.New(group, db, gocrud.CRUD[model.Preview]{
+	err := gocrud.New(group, db, gocrud.Crud[model.Preview]{
 		SearchHandlers: map[string]gocrud.SearchHandler{
 			"datasourceId":     gocrud.KeywordEqual("datasource_id", nil),
 			"mime":             gocrud.KeywordLike("mime", nil),
