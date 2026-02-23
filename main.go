@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/allape/gocrud"
 	"github.com/allape/gogger"
 	"github.com/allape/goview/controller"
 	"github.com/allape/goview/env"
@@ -42,10 +43,15 @@ func main() {
 	engine := gin.Default()
 
 	if env.EnableCors {
-		engine.Use(cors.Default())
+		config := cors.DefaultConfig()
+		config.AddAllowHeaders("Authorization")
+		config.AllowAllOrigins = true
+		engine.Use(cors.New(config))
 	}
 
-	err = controller.SetupUIController(engine, env.UIFolder)
+	err = gocrud.NewSingleHTMLServe(engine.Group("/ui"), env.UIFolder, &gocrud.SingleHTMLServeConfig{
+		AllowReplace: true,
+	})
 	if err != nil {
 		l.Error().Fatalf("Failed to setup ui controller: %v", err)
 	}
